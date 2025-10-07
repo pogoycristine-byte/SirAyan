@@ -1,11 +1,11 @@
 import React from "react";
 import { View, Text, Button, StyleSheet } from "react-native";
 
-export default function Dashboard({ navigation }) {
+export default function TeacherDashboard({ navigation }) {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Student Dashboard</Text>
-      <Button title="View My QR Code" onPress={() => navigation.navigate("QRCodePage")} />
+      <Text style={styles.title}>Teacher Dashboard</Text>
+      <Button title="Scan Student QR" onPress={() => navigation.navigate("QRScannerPage")} />
     </View>
   );
 }

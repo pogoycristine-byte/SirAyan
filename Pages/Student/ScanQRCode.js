@@ -1,11 +1,19 @@
 import React from "react";
-import { View, Text } from "react-native";
-import { globalStyles } from "../../Styles/globalStyles";
+import { View, Text, StyleSheet } from "react-native";
+import QRCode from "react-native-qrcode-svg";
 
-export default function ScanQRCode() {
+export default function QRCodePage() {
+  const studentId = "student123"; // replace with dynamic user ID later
+
   return (
-    <View style={globalStyles.container}>
-      <Text style={globalStyles.title}>Scan QR Code</Text>
+    <View style={styles.container}>
+      <Text style={styles.title}>My QR Code</Text>
+      <QRCode value={studentId} size={200} />
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, justifyContent: "center", alignItems: "center" },
+  title: { fontSize: 24, fontWeight: "bold", marginBottom: 20 },
+});

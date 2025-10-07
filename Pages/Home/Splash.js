@@ -4,15 +4,14 @@ import { View, Text, StyleSheet } from "react-native";
 export default function Splash({ navigation }) {
   useEffect(() => {
     const timer = setTimeout(() => {
-      navigation.replace("Account"); // Navigate to Account after 5 seconds
+      navigation.replace("Account");
     }, 5000);
-
     return () => clearTimeout(timer);
   }, [navigation]);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Welcome to My Attendance Tracker App</Text>
+      <Text style={styles.title}>Can't decide sa design aria.</Text>
     </View>
   );
 }
