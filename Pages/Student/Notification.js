@@ -2,12 +2,12 @@ import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import QRCode from "react-native-qrcode-svg";
 
-export default function QRCodePage() {
+export default function Notification() {
   const studentId = "student123"; // replace with dynamic user ID later
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>My QR Code</Text>
+      <Text style={styles.title}>Notification</Text>
       <QRCode value={studentId} size={200} />
     </View>
   );
