@@ -10,8 +10,12 @@ import {
   ScrollView,
 } from "react-native";
 import QRCode from "react-native-qrcode-svg";
+import { useNavigation } from '@react-navigation/native';
 
 export default function Dashboard() {
+  
+  const navigation = useNavigation();
+  
   const [student, setStudent] = useState({
     id: "12-000447",
     name: "Jubelle Franze C. Mabalatan",
@@ -141,13 +145,27 @@ export default function Dashboard() {
         </View>
       </ScrollView>
 
-      {/* Bottom Navigation */}
+ {/* Bottom Navigation */}
       <View style={styles.navBar}>
-        <Text style={[styles.navItem, styles.activeNav]}>HOME</Text>
-        <Text style={styles.navItem}>NOTIFICATION</Text>
-        <Text style={styles.navItem}>ATTACH LETTER</Text>
-        <Text style={styles.navItem}>LOG</Text>
-        <Text style={styles.navItem}>MORE</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('Dashboard')}>
+          <Text style={[styles.navItem, styles.activeNav]}>HOME</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => navigation.navigate('Notification')}>
+          <Text style={styles.navItem}>NOTIFICATION</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => navigation.navigate('AttachLetter')}>
+          <Text style={styles.navItem}>ATTACH LETTER</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => navigation.navigate('Log')}>
+          <Text style={styles.navItem}>LOG</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => navigation.navigate('More')}>
+          <Text style={styles.navItem}>MORE</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -234,5 +252,8 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
   },
   navItem: { color: "#ccc", fontSize: 12, fontWeight: "bold" },
-  activeNav: { color: "#fbbf24" },
+  activeNav: { color: "#fbbf24", 
+    textDecorationLine: 'underline',
+  },
 });
+
