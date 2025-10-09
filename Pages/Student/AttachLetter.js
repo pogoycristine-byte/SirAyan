@@ -10,7 +10,7 @@ export default function AttachLetter() {
       <Text style={globalStyles.title}>Excuse Letter</Text>
       <TextInput
         style={globalStyles.input}
-        placeholder="Type your excuse here..."
+        placeholder="Type your excuse here....."
         multiline
         value={letter}
         onChangeText={setLetter}
