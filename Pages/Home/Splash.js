@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, StyleSheet, ImageBackground } from "react-native";
 
 export default function Splash({ navigation }) {
   useEffect(() => {
@@ -10,13 +10,25 @@ export default function Splash({ navigation }) {
   }, [navigation]);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Can't decide sa design aria.</Text>
-    </View>
+    <ImageBackground
+      source={require("../../assets/frontcover.png")}
+      style={styles.background}
+      resizeMode="cover"
+    >
+      <View style={styles.overlay}></View>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#007bff" },
-  title: { color: "#fff", fontSize: 28, fontWeight: "bold", textAlign: "center", padding: 20 },
+  background: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  overlay: {
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
+    padding: 20,
+    borderRadius: 10,
+  },
 });
