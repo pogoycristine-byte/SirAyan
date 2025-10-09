@@ -13,9 +13,9 @@ import QRCode from "react-native-qrcode-svg";
 
 export default function Dashboard() {
   const [student, setStudent] = useState({
-    id: "STU2025-001",
-    name: "Abhay Kumar",
-    section: "CS-3A",
+    id: "12-000447",
+    name: "Jubelle Franze C. Mabalatan",
+    section: "BSIT-3 Blck-01",
   });
 
   const [attendance, setAttendance] = useState(null);

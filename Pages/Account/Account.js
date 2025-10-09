@@ -8,7 +8,7 @@ export default function Account({ navigation }) {
   // Predefined usernames and passwords
   const users = [
     { username: "jayian", password: "teacher123", role: "teacher" },
-    { username: "student", password: "student123", role: "student" },
+    { username: "jubellefranze", password: "ikawlangatako", role: "student" },
     { username: "student2", password: "student1234", role: "student" },
   ];
 
