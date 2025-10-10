@@ -1,4 +1,3 @@
-// Dashboard.js
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -10,7 +9,7 @@ import {
   ScrollView,
 } from "react-native";
 import QRCode from "react-native-qrcode-svg";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, CommonActions } from "@react-navigation/native";
 
 export default function Dashboard() {
   const navigation = useNavigation();
@@ -18,7 +17,7 @@ export default function Dashboard() {
   const [student, setStudent] = useState({
     id: "12-000447",
     name: "Jubelle Franze C. Mabalatan",
-    section: "BSIT-3 Blck-01",
+    section: "BSIT-3 Block-01",
   });
 
   const [attendance, setAttendance] = useState(null);
@@ -60,8 +59,14 @@ export default function Dashboard() {
       {
         text: "Logout",
         style: "destructive",
-        onPress: () => navigation.replace("Home"), // Redirect to your login screen
-        // hindi q alam ano ung nilgay mo na login page
+        onPress: () => {
+          navigation.dispatch(
+            CommonActions.reset({
+              index: 0,
+              routes: [{ name: "Account" }],
+            })
+          );
+        },
       },
     ]);
   };
@@ -185,7 +190,6 @@ const styles = StyleSheet.create({
   profileImage: { width: 40, height: 40, borderRadius: 20 },
   headerTitle: { fontSize: 18, fontWeight: "600" },
 
-  // ✅ Logout Styles
   logoutButton: {
     backgroundColor: "#f3f4f6",
     padding: 8,
