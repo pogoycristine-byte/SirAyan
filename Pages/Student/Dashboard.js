@@ -10,12 +10,11 @@ import {
   ScrollView,
 } from "react-native";
 import QRCode from "react-native-qrcode-svg";
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation } from "@react-navigation/native";
 
 export default function Dashboard() {
-  
   const navigation = useNavigation();
-  
+
   const [student, setStudent] = useState({
     id: "12-000447",
     name: "Jubelle Franze C. Mabalatan",
@@ -38,7 +37,6 @@ export default function Dashboard() {
   const handleAttendance = async (status) => {
     setAttendance(status);
     try {
-      // Example backend call
       await fetch("https://your-api-endpoint.com/api/attendance/mark", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -53,6 +51,19 @@ export default function Dashboard() {
       console.error(error);
       Alert.alert("Error", "Failed to mark attendance. Please try again.");
     }
+  };
+
+  // ✅ Logout Function
+  const handleLogout = () => {
+    Alert.alert("Confirm Logout", "Are you sure you want to log out?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Logout",
+        style: "destructive",
+        onPress: () => navigation.replace("Home"), // Redirect to your login screen
+        // hindi q alam ano ung nilgay mo na login page
+      },
+    ]);
   };
 
   const qrData = JSON.stringify({
@@ -74,6 +85,16 @@ export default function Dashboard() {
           />
           <Text style={styles.headerTitle}>Home</Text>
         </View>
+
+        {/* ✅ Logout Button */}
+        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+          <Image
+            source={{
+              uri: "https://cdn-icons-png.flaticon.com/512/1828/1828490.png",
+            }}
+            style={styles.logoutIcon}
+          />
+        </TouchableOpacity>
       </View>
 
       {/* Content */}
@@ -144,33 +165,11 @@ export default function Dashboard() {
           </View>
         </View>
       </ScrollView>
-
- {/* Bottom Navigation */}
-      <View style={styles.navBar}>
-        <TouchableOpacity onPress={() => navigation.navigate('Dashboard')}>
-          <Text style={[styles.navItem, styles.activeNav]}>HOME</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => navigation.navigate('Notification')}>
-          <Text style={styles.navItem}>NOTIFICATION</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => navigation.navigate('AttachLetter')}>
-          <Text style={styles.navItem}>ATTACH LETTER</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => navigation.navigate('Log')}>
-          <Text style={styles.navItem}>LOG</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => navigation.navigate('More')}>
-          <Text style={styles.navItem}>MORE</Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 }
 
+// STYLES
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f3f3f3" },
   header: {
@@ -185,10 +184,16 @@ const styles = StyleSheet.create({
   headerLeft: { flexDirection: "row", alignItems: "center", gap: 10 },
   profileImage: { width: 40, height: 40, borderRadius: 20 },
   headerTitle: { fontSize: 18, fontWeight: "600" },
-  content: {
-    padding: 20,
-    alignItems: "center",
+
+  // ✅ Logout Styles
+  logoutButton: {
+    backgroundColor: "#f3f4f6",
+    padding: 8,
+    borderRadius: 10,
   },
+  logoutIcon: { width: 22, height: 22, tintColor: "#ef4444" },
+
+  content: { padding: 20, alignItems: "center" },
   qrContainer: {
     backgroundColor: "#111",
     padding: 20,
@@ -243,17 +248,4 @@ const styles = StyleSheet.create({
   buttonText: { fontWeight: "bold", color: "#333" },
   presentText: { color: "#065f46" },
   absentText: { color: "#7f1d1d" },
-  navBar: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    backgroundColor: "#201c2b",
-    paddingVertical: 10,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-  },
-  navItem: { color: "#ccc", fontSize: 12, fontWeight: "bold" },
-  activeNav: { color: "#fbbf24", 
-    textDecorationLine: 'underline',
-  },
 });
-
