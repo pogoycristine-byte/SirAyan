@@ -1,4 +1,3 @@
-// Dashboard.js
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -8,14 +7,23 @@ import {
   Image,
   Alert,
   ScrollView,
+  StatusBar,
+  Dimensions,
 } from "react-native";
 import QRCode from "react-native-qrcode-svg";
+import { useNavigation, CommonActions } from "@react-navigation/native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
+
+const { width } = Dimensions.get("window");
 
 export default function Dashboard() {
+  const navigation = useNavigation();
+
   const [student, setStudent] = useState({
-    id: "STU2025-001",
-    name: "Abhay Kumar",
-    section: "CS-3A",
+    id: "12-000447",
+    name: "Jubelle Franze C. Mabalatan",
+    section: "BSIT-3 Block-01",
   });
 
   const [attendance, setAttendance] = useState(null);
@@ -34,7 +42,6 @@ export default function Dashboard() {
   const handleAttendance = async (status) => {
     setAttendance(status);
     try {
-      // Example backend call
       await fetch("https://your-api-endpoint.com/api/attendance/mark", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -51,6 +58,24 @@ export default function Dashboard() {
     }
   };
 
+  const handleLogout = () => {
+    Alert.alert("Confirm Logout", "Are you sure you want to log out?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Logout",
+        style: "destructive",
+        onPress: () => {
+          navigation.dispatch(
+            CommonActions.reset({
+              index: 0,
+              routes: [{ name: "Account" }],
+            })
+          );
+        },
+      },
+    ]);
+  };
+
   const qrData = JSON.stringify({
     id: student.id,
     name: student.name,
@@ -58,181 +83,195 @@ export default function Dashboard() {
   });
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Image
-            source={{
-              uri: "https://cdn-icons-png.flaticon.com/512/847/847969.png",
-            }}
-            style={styles.profileImage}
-          />
-          <Text style={styles.headerTitle}>Home</Text>
-        </View>
-      </View>
-
-      {/* Content */}
-      <ScrollView contentContainerStyle={styles.content}>
-        {/* QR Code Section */}
-        <View style={styles.qrContainer}>
-          <QRCode
-            value={qrData}
-            size={180}
-            backgroundColor="#1f1f1f"
-            color="#fbbf24"
-          />
-          <Text style={styles.qrLabel}>Scan this code for attendance</Text>
-        </View>
-
-        {/* Attendance Card */}
-        <View style={styles.card}>
-          <View style={styles.studentRow}>
-            <Image
-              source={{
-                uri: "https://cdn-icons-png.flaticon.com/512/1946/1946429.png",
-              }}
-              style={styles.studentImage}
-            />
-            <View style={{ flex: 1, marginLeft: 10 }}>
-              <Text style={styles.studentName}>{student.name}</Text>
-              <Text style={styles.studentSection}>{student.section}</Text>
+    <View style={styles.root}>
+      <StatusBar backgroundColor="#1E3A8A" barStyle="light-content" />
+      <SafeAreaView style={styles.safeArea}>
+        <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+          <LinearGradient
+            colors={["#2563EB", "#1E3A8A"]}
+            style={styles.headerGradient}
+          >
+            <View style={styles.header}>
+              <View style={styles.headerLeft}>
+                <Image
+                  source={{
+                    uri: "https://cdn-icons-png.flaticon.com/512/847/847969.png",
+                  }}
+                  style={styles.profileImage}
+                />
+                <View>
+                  <Text style={styles.headerText}>Welcome back,</Text>
+                  <Text style={styles.studentNameHeader}>{student.name}</Text>
+                </View>
+              </View>
+              <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+                <Image
+                  source={{
+                    uri: "https://cdn-icons-png.flaticon.com/512/1828/1828490.png",
+                  }}
+                  style={styles.logoutIcon}
+                />
+              </TouchableOpacity>
             </View>
-            <Text style={styles.dateText}>{today}</Text>
+          </LinearGradient>
+
+          <View style={styles.qrSection}>
+            <View style={styles.qrContainer}>
+              <QRCode value={qrData} size={180} color="#2563EB" backgroundColor="white" />
+            </View>
+            <Text style={styles.qrLabel}>Scan this code for attendance</Text>
           </View>
 
-          <Text style={styles.attendanceTitle}>ATTENDANCE</Text>
+          <View style={styles.card}>
+            <View style={styles.studentRow}>
+              <Image
+                source={{
+                  uri: "https://cdn-icons-png.flaticon.com/512/1946/1946429.png",
+                }}
+                style={styles.studentImage}
+              />
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <Text style={styles.studentName}>{student.name}</Text>
+                <Text style={styles.studentSection}>{student.section}</Text>
+              </View>
+              <Text style={styles.dateText}>{today}</Text>
+            </View>
 
-          <View style={styles.buttonRow}>
-            <TouchableOpacity
-              style={[
-                styles.attendanceButton,
-                attendance === "Present" && styles.presentButton,
-              ]}
-              onPress={() => handleAttendance("Present")}
-            >
-              <Text
-                style={[
-                  styles.buttonText,
-                  attendance === "Present" && styles.presentText,
-                ]}
-              >
-                PRESENT
-              </Text>
-            </TouchableOpacity>
+            <Text style={styles.attendanceTitle}>Today’s Attendance</Text>
+            <Text style={styles.infoNote}>
+              Your teacher will scan your QR code to mark attendance.
+            </Text>
 
-            <TouchableOpacity
-              style={[
-                styles.attendanceButton,
-                attendance === "Absent" && styles.absentButton,
-              ]}
-              onPress={() => handleAttendance("Absent")}
-            >
-              <Text
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
                 style={[
-                  styles.buttonText,
-                  attendance === "Absent" && styles.absentText,
+                  styles.attendanceButton,
+                  attendance === "Present" && styles.presentButton,
                 ]}
+                onPress={() => handleAttendance("Present")}
               >
-                ABSENT
-              </Text>
-            </TouchableOpacity>
+                <Text
+                  style={[
+                    styles.buttonText,
+                    attendance === "Present" && styles.presentText,
+                  ]}
+                >
+                  PRESENT
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.attendanceButton,
+                  attendance === "Absent" && styles.absentButton,
+                ]}
+                onPress={() => handleAttendance("Absent")}
+              >
+                <Text
+                  style={[
+                    styles.buttonText,
+                    attendance === "Absent" && styles.absentText,
+                  ]}
+                >
+                  ABSENT
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </ScrollView>
-
-      {/* Bottom Navigation */}
-      <View style={styles.navBar}>
-        <Text style={[styles.navItem, styles.activeNav]}>HOME</Text>
-        <Text style={styles.navItem}>NOTIFICATION</Text>
-        <Text style={styles.navItem}>ATTACH LETTER</Text>
-        <Text style={styles.navItem}>LOG</Text>
-        <Text style={styles.navItem}>MORE</Text>
-      </View>
+        </ScrollView>
+      </SafeAreaView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f3f3f3" },
+  root: { flex: 1, backgroundColor: "#F0F4FF" },
+  safeArea: { flex: 1, backgroundColor: "#F0F4FF" },
+  headerGradient: {
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    elevation: 5,
+  },
   header: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#fff",
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ddd",
-  },
-  headerLeft: { flexDirection: "row", alignItems: "center", gap: 10 },
-  profileImage: { width: 40, height: 40, borderRadius: 20 },
-  headerTitle: { fontSize: 18, fontWeight: "600" },
-  content: {
-    padding: 20,
     alignItems: "center",
   },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  profileImage: { width: 50, height: 50, borderRadius: 25, backgroundColor: "#fff" },
+  headerText: { color: "#DCE7FF", fontSize: 13 },
+  studentNameHeader: { color: "#fff", fontSize: 18, fontWeight: "bold" },
+  logoutButton: { backgroundColor: "#FFFFFF20", padding: 8, borderRadius: 12 },
+  logoutIcon: { width: 22, height: 22, tintColor: "white" },
+  qrSection: { alignItems: "center", marginTop: 30 },
   qrContainer: {
-    backgroundColor: "#111",
-    padding: 20,
+    backgroundColor: "white",
+    padding: 25,
     borderRadius: 20,
-    marginBottom: 25,
-    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 4,
   },
-  qrLabel: { color: "#fbbf24", marginTop: 10, fontWeight: "bold" },
+  qrLabel: { marginTop: 12, fontSize: 14, fontWeight: "600", color: "#1E3A8A" },
   card: {
     backgroundColor: "#fff",
-    borderRadius: 15,
+    borderRadius: 18,
+    margin: 20,
     padding: 20,
-    width: "100%",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowRadius: 6,
+    elevation: 4,
   },
-  studentRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  studentImage: { width: 40, height: 40, borderRadius: 20 },
-  studentName: { fontWeight: "bold", fontSize: 16 },
-  studentSection: { color: "#666", fontSize: 13 },
-  dateText: { color: "#666", fontSize: 12 },
+  studentRow: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
+  studentImage: { width: 45, height: 45, borderRadius: 22 },
+  studentName: { fontWeight: "bold", fontSize: 16, color: "#1E3A8A" },
+  studentSection: { color: "#64748B", fontSize: 13 },
+  dateText: { color: "#64748B", fontSize: 12 },
   attendanceTitle: {
     textAlign: "center",
     fontSize: 18,
     fontWeight: "bold",
+    color: "#1E3A8A",
     marginVertical: 10,
   },
-  buttonRow: { flexDirection: "row", justifyContent: "space-around" },
-  attendanceButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    backgroundColor: "#eee",
+  infoNote: {
+    textAlign: "center",
+    color: "#64748B",
+    fontSize: 12,
+    marginBottom: 15,
   },
-  presentButton: {
-    backgroundColor: "#d1fae5",
-    borderWidth: 1,
-    borderColor: "#10b981",
-  },
-  absentButton: {
-    backgroundColor: "#fee2e2",
-    borderWidth: 1,
-    borderColor: "#ef4444",
-  },
-  buttonText: { fontWeight: "bold", color: "#333" },
-  presentText: { color: "#065f46" },
-  absentText: { color: "#7f1d1d" },
-  navBar: {
+  buttonRow: {
     flexDirection: "row",
     justifyContent: "space-around",
-    backgroundColor: "#201c2b",
-    paddingVertical: 10,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    marginTop: 5,
   },
-  navItem: { color: "#ccc", fontSize: 12, fontWeight: "bold" },
-  activeNav: { color: "#fbbf24" },
+  attendanceButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 25,
+    borderRadius: 8,
+    backgroundColor: "#E2E8F0",
+  },
+  presentButton: {
+    backgroundColor: "#BFDBFE",
+    borderWidth: 1,
+    borderColor: "#2563EB",
+  },
+  absentButton: {
+    backgroundColor: "#FEE2E2",
+    borderWidth: 1,
+    borderColor: "#EF4444",
+  },
+  buttonText: { fontWeight: "bold", color: "#1E3A8A" },
+  presentText: { color: "#1E3A8A" },
+  absentText: { color: "#B91C1C" },
 });
