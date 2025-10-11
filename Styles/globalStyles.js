@@ -1,7 +1,13 @@
-import { StyleSheet } from "react-native";
+import { StyleSheet, Platform, StatusBar } from "react-native";
 
 export const globalStyles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: "#fff" },
+  container: {
+    flex: 1,
+    padding: 20,
+    backgroundColor: "#fff",
+    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight + 20 : 20,
+    paddingBottom: 20,
+  },
   title: { fontSize: 20, fontWeight: "bold", marginBottom: 20 },
   input: {
     width: "100%",
