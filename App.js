@@ -5,6 +5,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons, MaterialIcons, Feather } from "@expo/vector-icons";
 
+import Splash from "./Pages/Home/Splash"; 
 import Account from "./Pages/Account/Account";
 import Dashboard from "./Pages/Student/Dashboard";
 import Notification from "./Pages/Student/Notification";
@@ -15,6 +16,15 @@ import TeacherDashboard from "./Pages/Teacher/TeacherDashboard";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
+
+// Mapping for tab icons
+const tabIcons = {
+  Dashboard: ({ focused, color }) => <Ionicons name={focused ? "home" : "home-outline"} size={24} color={color} />,
+  Notification: ({ focused, color }) => <Ionicons name={focused ? "notifications" : "notifications-outline"} size={24} color={color} />,
+  AttachLetter: ({ color }) => <MaterialIcons name="attach-file" size={24} color={color} />,
+  Log: ({ color }) => <Feather name="book" size={24} color={color} />,
+  More: ({ color }) => <Feather name="menu" size={24} color={color} />,
+};
 
 function StudentTabs({ route }) {
   const studentId = route.params?.studentId;
@@ -36,25 +46,14 @@ function StudentTabs({ route }) {
           paddingBottom: 10 + insets.bottom,
         },
         tabBarIcon: ({ color, focused }) => {
-          if (route.name === "Dashboard") {
-            return <Ionicons name={focused ? "home" : "home-outline"} size={24} color={color} />;
-          } else if (route.name === "Notification") {
-            return <Ionicons name={focused ? "notifications" : "notifications-outline"} size={24} color={color} />;
-          } else if (route.name === "AttachLetter") {
-            return <MaterialIcons name="attach-file" size={24} color={color} />;
-          } else if (route.name === "Log") {
-            return <Feather name="book" size={24} color={color} />;
-          } else if (route.name === "More") {
-            return <Feather name="menu" size={24} color={color} />;
-          }
+          const IconComponent = tabIcons[route.name];
+          return IconComponent ? <IconComponent color={color} focused={focused} /> : null;
         },
       })}
     >
-      <Tab.Screen name="Dashboard" component={Dashboard} options={{ title: "Home" }} initialParams={{ studentId }} />
+      <Tab.Screen name="Dashboard" component={Dashboard} initialParams={{ studentId }} options={{ title: "Home" }} />
       <Tab.Screen name="Notification" component={Notification} initialParams={{ studentId }} />
-      <Tab.Screen name="AttachLetter">
-        {props => <AttachLetter {...props} studentId={studentId} />}
-      </Tab.Screen>
+      <Tab.Screen name="AttachLetter" component={AttachLetter} initialParams={{ studentId }} />
       <Tab.Screen name="Log" component={Log} initialParams={{ studentId }} />
       <Tab.Screen name="More" component={More} initialParams={{ studentId }} />
     </Tab.Navigator>
@@ -64,7 +63,8 @@ function StudentTabs({ route }) {
 export default function App() {
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="Account" screenOptions={{ headerShown: false }}>
+      <Stack.Navigator initialRouteName="Splash" screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="Splash" component={Splash} />
         <Stack.Screen name="Account" component={Account} />
         <Stack.Screen name="StudentDashboard" component={StudentTabs} />
         <Stack.Screen name="TeacherDashboard" component={TeacherDashboard} />

@@ -37,8 +37,10 @@ export default function AttachLetter({ studentId }) {
 
   const uploadFile = async () => {
     if (!file) return Alert.alert("No file selected", "Please attach a file first.");
+
     setUploading(true);
     try {
+      // Simulate upload delay
       await new Promise((resolve) => setTimeout(resolve, 1500));
       Alert.alert("Success", `Uploaded: ${file.name}`);
       setFile(null);
@@ -48,24 +50,24 @@ export default function AttachLetter({ studentId }) {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#F5F7FF" }}>
+    <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1 }}
+        style={styles.flex}
       >
         <ScrollView contentContainerStyle={styles.scrollContainer}>
           <Text style={styles.title}>Attach Excuse Letter</Text>
 
           <TouchableOpacity style={styles.box} onPress={pickFile} activeOpacity={0.8}>
             {!file ? (
-              <>
+              <View style={styles.centeredContent}>
                 <Image
                   source={{ uri: "https://cdn-icons-png.flaticon.com/512/109/109612.png" }}
                   style={styles.icon}
                 />
                 <Text style={styles.placeholder}>Tap to select your PDF/TXT file</Text>
                 <Text style={styles.helperText}>Maximum file size: 5MB</Text>
-              </>
+              </View>
             ) : (
               <View style={styles.fileInfo}>
                 <Image
@@ -73,7 +75,9 @@ export default function AttachLetter({ studentId }) {
                   style={styles.fileIcon}
                 />
                 <Text style={styles.fileName}>{file.name}</Text>
-                {file.size && <Text style={styles.fileSize}>{(file.size / 1024).toFixed(2)} KB</Text>}
+                {file.size && (
+                  <Text style={styles.fileSize}>{(file.size / 1024).toFixed(2)} KB</Text>
+                )}
                 <TouchableOpacity style={styles.removeButton} onPress={removeFile}>
                   <Text style={styles.buttonText}>Remove File</Text>
                 </TouchableOpacity>
@@ -103,6 +107,8 @@ export default function AttachLetter({ studentId }) {
 }
 
 const styles = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: "#F5F7FF" },
+  flex: { flex: 1 },
   scrollContainer: {
     flexGrow: 1,
     justifyContent: "center",
@@ -127,6 +133,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 5,
   },
+  centeredContent: { alignItems: "center" },
   icon: { width: 60, height: 60, marginBottom: 15, tintColor: "#3B82F6" },
   placeholder: { color: "#3B82F6", fontWeight: "500", textAlign: "center", fontSize: 16 },
   helperText: { fontSize: 12, color: "#64748B", marginTop: 5, textAlign: "center" },
