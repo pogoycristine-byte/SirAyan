@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import QRCode from "react-native-qrcode-svg";
 import { useNavigation, CommonActions } from "@react-navigation/native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons, MaterialIcons, Feather } from "@expo/vector-icons";
@@ -26,6 +26,7 @@ const Tab = createBottomTabNavigator();
 
 function DashboardMain() {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
 
   const [student, setStudent] = useState({
     id: "12-000447",
@@ -93,7 +94,7 @@ function DashboardMain() {
     <View style={styles.root}>
       <StatusBar backgroundColor="#1E3A8A" barStyle="light-content" />
       <SafeAreaView style={styles.safeArea}>
-        <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+        <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}>
           <LinearGradient
             colors={["#2563EB", "#1E3A8A"]}
             style={styles.headerGradient}
@@ -192,8 +193,9 @@ function DashboardMain() {
 }
 
 export default function Dashboard() {
+  const insets = useSafeAreaInsets();
   const tabIcons = {
-    Dashboard: ({ focused, color }) => <Ionicons name={focused ? "home" : "home-outline"} size={24} color={color} />,
+    DashboardMain: ({ focused, color }) => <Ionicons name={focused ? "home" : "home-outline"} size={24} color={color} />,
     Notification: ({ color }) => <Ionicons name="notifications" size={24} color={color} />,
     AttachLetter: ({ color }) => <MaterialIcons name="attach-file" size={24} color={color} />,
     Log: ({ color }) => <Feather name="book" size={24} color={color} />,
@@ -208,7 +210,13 @@ export default function Dashboard() {
         tabBarShowLabel: true,
         tabBarActiveTintColor: "#007bff",
         tabBarInactiveTintColor: "#808080",
-        tabBarStyle: { backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, height: 65, paddingBottom: 10 },
+        tabBarStyle: { 
+          backgroundColor: "#fff", 
+          borderTopLeftRadius: 20, 
+          borderTopRightRadius: 20, 
+          height: 65 + insets.bottom, 
+          paddingBottom: 10 + insets.bottom,
+        },
         tabBarIcon: ({ color, focused }) => {
           const IconComponent = tabIcons[route.name];
           return IconComponent ? <IconComponent color={color} focused={focused} /> : null;
