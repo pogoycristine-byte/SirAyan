@@ -15,8 +15,8 @@ export default function Dashboard() {
   const navigation = useNavigation();
 
   const [student, setStudent] = useState({
-    id: "12-000447",
-    name: "Jubelle Franze C. Mabalatan",
+    id: "23-425267",
+    name: "Cristine Pogoy",
     section: "BSIT-3 Block-01",
   });
 
@@ -51,7 +51,7 @@ export default function Dashboard() {
       Alert.alert("Error", "Failed to mark attendance. Please try again.");
     }
   };
-  // ✅ Logout Function
+  //Logout Function
 const handleLogout = () => {
   Alert.alert("Confirm Logout", "Are you sure you want to log out?", [
     { text: "Cancel", style: "cancel" },
@@ -90,7 +90,7 @@ const handleLogout = () => {
           <Text style={styles.headerTitle}>Home</Text>
         </View>
 
-        {/* ✅ Logout Button */}
+        {/* Logout Button */}
         <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
           <Image
             source={{

@@ -23,7 +23,7 @@ const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 
-// ✅ Bottom Tabs for Students (unchanged)
+// Bottom Tabs for Students 
 function StudentTabs() {
   return (
     <Tab.Navigator
@@ -65,7 +65,7 @@ function StudentTabs() {
 }
 
 
-// ✅ Bottom Tabs for Teachers (NEW)
+// Bottom Tabs for Teachers 
 function TeacherTabs({ navigation }) {
   return (
     <Tab.Navigator
@@ -117,7 +117,7 @@ function TeacherTabs({ navigation }) {
 }
 
 
-// ✅ Main Navigation
+//Main Navigation
 export default function App() {
   return (
     <NavigationContainer>
