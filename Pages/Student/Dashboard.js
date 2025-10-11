@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#F0F4FF" },
   safeArea: { flex: 1, backgroundColor: "#F0F4FF" },
   headerGradient: {
-    paddingVertical: 20,
+    paddingVertical: 15,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 0,
     borderBottomRightRadius: 0,
