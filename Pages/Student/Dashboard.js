@@ -51,25 +51,24 @@ export default function Dashboard() {
       Alert.alert("Error", "Failed to mark attendance. Please try again.");
     }
   };
-
   // ✅ Logout Function
-  const handleLogout = () => {
-    Alert.alert("Confirm Logout", "Are you sure you want to log out?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Logout",
-        style: "destructive",
-        onPress: () => {
-          navigation.dispatch(
-            CommonActions.reset({
-              index: 0,
-              routes: [{ name: "Account" }],
-            })
-          );
-        },
+const handleLogout = () => {
+  Alert.alert("Confirm Logout", "Are you sure you want to log out?", [
+    { text: "Cancel", style: "cancel" },
+    {
+      text: "Logout",
+      style: "destructive",
+      onPress: () => {
+        navigation.dispatch(
+          CommonActions.reset({
+            index: 0,
+            routes: [{ name: "Splash" }],
+          })
+        );
       },
-    ]);
-  };
+    },
+  ]);
+};
 
   const qrData = JSON.stringify({
     id: student.id,
@@ -176,22 +175,23 @@ export default function Dashboard() {
 
 // STYLES
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f3f3f3" },
+  container: { flex: 1, backgroundColor: "hsl(172.6,80.3%,86.1%)" },
   header: {
+    marginTop: 5,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#fff",
+    backgroundColor: "hsl(184.2,65.5%,78.4%)",
     padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ddd",
+    borderBottomWidth: 2,
+    borderBottomColor: "hsla(176.7,65.6%,32.9%,0.773)",
   },
   headerLeft: { flexDirection: "row", alignItems: "center", gap: 10 },
   profileImage: { width: 40, height: 40, borderRadius: 20 },
   headerTitle: { fontSize: 18, fontWeight: "600" },
 
   logoutButton: {
-    backgroundColor: "#f3f4f6",
+    backgroundColor: "hsl(184.2,65.5%,78.4%)",
     padding: 8,
     borderRadius: 10,
   },
