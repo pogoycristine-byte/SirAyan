@@ -13,9 +13,9 @@ import { useNavigation, CommonActions } from "@react-navigation/native";
 export default function TeacherDashboard() {
   const navigation = useNavigation();
   const [teacher, setTeacher] = useState({
-    id: "T-2025-001",
+    id: "i don't know",
     name: "Jay Ian Camelotes",
-    department: "Information Technology Department",
+    department: "Computer Study Department",
   });
   // Logout Function
   const handleLogout = () => {
