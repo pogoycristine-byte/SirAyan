@@ -16,13 +16,43 @@ export default function Account({ navigation }) {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
-  //usernames and passwords
+  // usernames, passwords, and user info
   const users = [
-    { username: "jayian", password: "teacher123", role: "teacher" },
-    { username: "carl", password: "philip", role: "student" },
-    { username: "pogoycristine", password: "leader123", role: "student" },
-    { username: "jubelle", password: "franze", role: "student" },
-    { username: "student2", password: "student1234", role: "student" },
+    {
+      username: "jayian",
+      password: "teacher123",
+      role: "teacher",
+      name: "Jayian Teacher",
+      section: "Faculty",
+    },
+    {
+      username: "carl",
+      password: "philip",
+      role: "student",
+      name: "Carl Philip Romanda",
+      section: "BSIT-3 Block-01",
+    },
+    {
+      username: "pogoycristine",
+      password: "leader123",
+      role: "student",
+      name: "Cristine Pogoy",
+      section: "BSIT-3 Block-01",
+    },
+    {
+      username: "jubelle",
+      password: "franze",
+      role: "student",
+      name: "Jubelle Franze",
+      section: "BSIT-3 Block-01",
+    },
+    {
+      username: "student2",
+      password: "student1234",
+      role: "student",
+      name: "Student Two",
+      section: "BSIT-3 Block-01",
+    },
   ];
 
   // remembered user
@@ -65,11 +95,11 @@ export default function Account({ navigation }) {
         await AsyncStorage.removeItem("rememberedUser");
       }
 
-      // Navigate role
+      // Navigate role with user info
       if (user.role === "teacher") {
-        navigation.replace("TeacherTabs");
+        navigation.replace("TeacherDashboard", { user });
       } else if (user.role === "student") {
-        navigation.replace("StudentTabs");
+        navigation.replace("StudentDashboard", { user });
       } else {
         Alert.alert("Error", "No dashboard found for this user role.");
       }
@@ -132,6 +162,7 @@ export default function Account({ navigation }) {
     </View>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
