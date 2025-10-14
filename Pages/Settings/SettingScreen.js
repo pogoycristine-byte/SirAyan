@@ -2,12 +2,12 @@ import React, { useState } from "react";
 import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
 import { Ionicons, MaterialIcons, Entypo } from "@expo/vector-icons";
 
-import Account from "./screens/Account";
-import Security from "./screens/Security";
-import Preferences from "./screens/Preferences";
-import Support from "./screens/Support";
-import About from "./screens/About";
-import Logout from "./screens/Logout";
+// Import your screen components
+import Account from "./Account";
+import Security from "./Security";
+import Support from "./Support";
+import About from "./About";
+import Logout from "./Logout";
 
 export default function SettingsScreen() {
   const [activeScreen, setActiveScreen] = useState("Settings");
@@ -18,8 +18,6 @@ export default function SettingsScreen() {
         return <Account />;
       case "Security":
         return <Security />;
-      case "Preferences":
-        return <Preferences />;
       case "Support":
         return <Support />;
       case "About":
@@ -30,6 +28,14 @@ export default function SettingsScreen() {
         return renderSettingsMenu();
     }
   };
+
+  const menuItems = [
+    { label: "Account", key: "Account" },
+    { label: "Security", key: "Security" },
+    { label: "Help and support", key: "Support" },
+    { label: "About Us", key: "About" },
+    { label: "Logout", key: "Logout" },
+  ];
 
   const renderSettingsMenu = () => (
     <View style={styles.container}>
@@ -42,18 +48,11 @@ export default function SettingsScreen() {
       </View>
 
       <View style={styles.menu}>
-        {[
-          "Account",
-          "Security",
-          "App Preferences",
-          "Help and support",
-          "About Us",
-          "Logout",
-        ].map((label, index) => (
+        {menuItems.map(({ label, key }, index) => (
           <TouchableOpacity
             key={index}
             style={styles.menuItem}
-            onPress={() => setActiveScreen(label.replace(" ", ""))}
+            onPress={() => setActiveScreen(key)}
           >
             <Text style={styles.menuText}>{label}</Text>
           </TouchableOpacity>
