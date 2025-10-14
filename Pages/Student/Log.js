@@ -40,12 +40,18 @@ export default function Log() {
               { backgroundColor: index % 2 === 0 ? "#e0f2fe" : "#bae6fd" }, // alternating light blues
             ]}
           >
-            <Text style={[styles.cellText, { flex: 1, color: "#1e3a8a" }]}>{item.date}</Text>
+            <Text style={[styles.cellText, { flex: 1, color: "#1e3a8a" }]}>
+              {item.date}
+            </Text>
             <View style={[styles.statusCell, { flex: 1 }]}>
               {renderStatusIcon(item.status)}
-              <Text style={[styles.cellText, { marginLeft: 6, color: "#1e3a8a" }]}>{item.status}</Text>
+              <Text style={[styles.cellText, { marginLeft: 6, color: "#1e3a8a" }]}>
+                {item.status}
+              </Text>
             </View>
-            <Text style={[styles.cellText, { flex: 1.5, color: "#1e3a8a" }]}>{item.remarks || "-"}</Text>
+            <Text style={[styles.cellText, { flex: 1.5, color: "#1e3a8a" }]}>
+              {item.remarks || "-"}
+            </Text>
           </View>
         ))}
       </ScrollView>
@@ -58,7 +64,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff", // white background
     paddingHorizontal: 20,
-    paddingVertical: 25,
+    paddingTop: 50,   // increased top padding to move content lower
+    paddingBottom: 25,
   },
   tableHeader: {
     flexDirection: "row",
