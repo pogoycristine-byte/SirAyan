@@ -14,6 +14,7 @@
     "@react-navigation/bottom-tabs": "^7.4.8",
     "@react-navigation/native": "^7.1.18",
     "@react-navigation/native-stack": "^7.3.27",
+    "@react-navigation/stack": "^7.4.9",
     "expo": "~54.0.12",
     "expo-barcode-scanner": "^13.0.1",
     "expo-linear-gradient": "~15.0.7",
@@ -24,15 +25,22 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-native": "0.81.4",
+<<<<<<< HEAD
     "react-native-document-picker": "^9.3.1",
+=======
+>>>>>>> JubelleFranze
     "react-native-linear-gradient": "^2.8.3",
     "react-native-qrcode-svg": "^6.3.15",
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0",
     "react-native-svg": "15.12.1",
     "react-native-web": "^0.21.0",
+<<<<<<< HEAD
     "expo-document-picker": "~14.0.7",
     "expo-file-system": "~19.0.17"
+=======
+    "expo-linear-gradient": "~15.0.7"
+>>>>>>> JubelleFranze
   },
   "private": true,
   "devDependencies": {
