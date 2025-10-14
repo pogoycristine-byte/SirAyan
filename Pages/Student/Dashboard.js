@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import QRCode from "react-native-qrcode-svg";
 import { useNavigation, CommonActions } from "@react-navigation/native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInset } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons, MaterialIcons, Feather } from "@expo/vector-icons";
@@ -94,7 +94,9 @@ function DashboardMain() {
     <View style={styles.root}>
       <StatusBar backgroundColor="#1E3A8A" barStyle="light-content" />
       <SafeAreaView style={styles.safeArea}>
-        <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}>
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
+        >
           <LinearGradient
             colors={["#2563EB", "#1E3A8A"]}
             style={styles.headerGradient}
@@ -112,7 +114,10 @@ function DashboardMain() {
                   <Text style={styles.studentNameHeader}>{student.name}</Text>
                 </View>
               </View>
-              <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+              <TouchableOpacity
+                onPress={handleLogout}
+                style={styles.logoutButton}
+              >
                 <Image
                   source={{
                     uri: "https://cdn-icons-png.flaticon.com/512/1828/1828490.png",
@@ -125,7 +130,12 @@ function DashboardMain() {
 
           <View style={styles.qrSection}>
             <View style={styles.qrContainer}>
-              <QRCode value={qrData} size={180} color="#2563EB" backgroundColor="white" />
+              <QRCode
+                value={qrData}
+                size={180}
+                color="#2563EB"
+                backgroundColor="white"
+              />
             </View>
             <Text style={styles.qrLabel}>Scan this code for attendance</Text>
           </View>
@@ -195,9 +205,19 @@ function DashboardMain() {
 export default function Dashboard() {
   const insets = useSafeAreaInsets();
   const tabIcons = {
-    DashboardMain: ({ focused, color }) => <Ionicons name={focused ? "home" : "home-outline"} size={24} color={color} />,
-    Notification: ({ color }) => <Ionicons name="notifications" size={24} color={color} />,
-    AttachLetter: ({ color }) => <MaterialIcons name="attach-file" size={24} color={color} />,
+    DashboardMain: ({ focused, color }) => (
+      <Ionicons
+        name={focused ? "home" : "home-outline"}
+        size={24}
+        color={color}
+      />
+    ),
+    Notification: ({ color }) => (
+      <Ionicons name="notifications" size={24} color={color} />
+    ),
+    AttachLetter: ({ color }) => (
+      <MaterialIcons name="attach-file" size={24} color={color} />
+    ),
     Log: ({ color }) => <Feather name="book" size={24} color={color} />,
     More: ({ color }) => <Feather name="menu" size={24} color={color} />,
   };
@@ -210,20 +230,26 @@ export default function Dashboard() {
         tabBarShowLabel: true,
         tabBarActiveTintColor: "#007bff",
         tabBarInactiveTintColor: "#808080",
-        tabBarStyle: { 
-          backgroundColor: "#fff", 
-          borderTopLeftRadius: 20, 
-          borderTopRightRadius: 20, 
-          height: 65 + insets.bottom, 
+        tabBarStyle: {
+          backgroundColor: "#fff",
+          borderTopLeftRadius: 20,
+          borderTopRightRadius: 20,
+          height: 65 + insets.bottom,
           paddingBottom: 10 + insets.bottom,
         },
         tabBarIcon: ({ color, focused }) => {
           const IconComponent = tabIcons[route.name];
-          return IconComponent ? <IconComponent color={color} focused={focused} /> : null;
+          return IconComponent ? (
+            <IconComponent color={color} focused={focused} />
+          ) : null;
         },
       })}
     >
-      <Tab.Screen name="DashboardMain" component={DashboardMain} options={{ title: "Home" }} />
+      <Tab.Screen
+        name="DashboardMain"
+        component={DashboardMain}
+        options={{ title: "Home" }}
+      />
       <Tab.Screen name="Notification" component={Notification} />
       <Tab.Screen name="AttachLetter" component={AttachLetter} />
       <Tab.Screen name="Log" component={Log} />
@@ -235,29 +261,91 @@ export default function Dashboard() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#F0F4FF" },
   safeArea: { flex: 1, backgroundColor: "#F0F4FF" },
-  headerGradient: { paddingVertical: 15, paddingHorizontal: 20, borderBottomLeftRadius: 0, borderBottomRightRadius: 0, elevation: 5 },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  headerGradient: {
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    elevation: 5,
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
   headerLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
-  profileImage: { width: 50, height: 50, borderRadius: 25, backgroundColor: "#fff" },
+  profileImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: "#fff",
+  },
   headerText: { color: "#DCE7FF", fontSize: 13 },
   studentNameHeader: { color: "#fff", fontSize: 18, fontWeight: "bold" },
   logoutButton: { backgroundColor: "#FFFFFF20", padding: 8, borderRadius: 12 },
   logoutIcon: { width: 22, height: 22, tintColor: "white" },
   qrSection: { alignItems: "center", marginTop: 30 },
-  qrContainer: { backgroundColor: "white", padding: 25, borderRadius: 20, shadowColor: "#000", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.15, shadowRadius: 4, elevation: 4 },
+  qrContainer: {
+    backgroundColor: "white",
+    padding: 25,
+    borderRadius: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 4,
+  },
   qrLabel: { marginTop: 12, fontSize: 14, fontWeight: "600", color: "#1E3A8A" },
-  card: { backgroundColor: "#fff", borderRadius: 18, margin: 20, padding: 20, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 6, elevation: 4 },
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 18,
+    margin: 20,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
+  },
   studentRow: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
   studentImage: { width: 45, height: 45, borderRadius: 22 },
   studentName: { fontWeight: "bold", fontSize: 16, color: "#1E3A8A" },
   studentSection: { color: "#64748B", fontSize: 13 },
   dateText: { color: "#64748B", fontSize: 12 },
-  attendanceTitle: { textAlign: "center", fontSize: 18, fontWeight: "bold", color: "#1E3A8A", marginVertical: 10 },
-  infoNote: { textAlign: "center", color: "#64748B", fontSize: 12, marginBottom: 15 },
-  buttonRow: { flexDirection: "row", justifyContent: "space-around", marginTop: 5 },
-  attendanceButton: { paddingVertical: 10, paddingHorizontal: 25, borderRadius: 8, backgroundColor: "#E2E8F0" },
-  presentButton: { backgroundColor: "#BFDBFE", borderWidth: 1, borderColor: "#2563EB" },
-  absentButton: { backgroundColor: "#FEE2E2", borderWidth: 1, borderColor: "#EF4444" },
+  attendanceTitle: {
+    textAlign: "center",
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#1E3A8A",
+    marginVertical: 10,
+  },
+  infoNote: {
+    textAlign: "center",
+    color: "#64748B",
+    fontSize: 12,
+    marginBottom: 15,
+  },
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    marginTop: 5,
+  },
+  attendanceButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 25,
+    borderRadius: 8,
+    backgroundColor: "#E2E8F0",
+  },
+  presentButton: {
+    backgroundColor: "#BFDBFE",
+    borderWidth: 1,
+    borderColor: "#2563EB",
+  },
+  absentButton: {
+    backgroundColor: "#FEE2E2",
+    borderWidth: 1,
+    borderColor: "#EF4444",
+  },
   buttonText: { fontWeight: "bold", color: "#1E3A8A" },
   presentText: { color: "#1E3A8A" },
   absentText: { color: "#B91C1C" },
