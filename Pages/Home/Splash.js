@@ -4,8 +4,8 @@ import { View, StyleSheet, ImageBackground } from "react-native";
 export default function Splash({ navigation }) {
   useEffect(() => {
     const timer = setTimeout(() => {
-      navigation.replace("Account");
-    }, 2000);
+      navigation.replace("Home");
+    }, 750);
     return () => clearTimeout(timer);
   }, [navigation]);
 

@@ -89,7 +89,7 @@ function DashboardMain({ route }) {
           navigation.dispatch(
             CommonActions.reset({
               index: 0,
-              routes: [{ name: "Account" }],
+              routes: [{ name: "Home" }],
             })
           );
         },
@@ -218,7 +218,7 @@ export default function Dashboard() {
         name="DashboardMain"
         component={DashboardMain}
         initialParams={{ user: route.params?.user }}
-        options={{ title: "Home" }}
+        options={{ title: "Dashboard" }}
       />
       <Tab.Screen name="Notification" component={Notification} />
       <Tab.Screen name="AttachLetter" component={AttachLetter} />
