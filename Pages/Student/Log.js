@@ -49,7 +49,7 @@ export default function Log() {
                 {item.status}
               </Text>
             </View>
-            <Text style={[styles.cellText, { flex: 1.5, color: "#1e3a8a" }]}>
+            <Text style={[styles.cellText, { flex: 1.5, color: "#1e3a8a", fontStyle: "italic" }]}>
               {item.remarks || "-"}
             </Text>
           </View>
@@ -90,6 +90,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.3,
     shadowRadius: 3,
+    borderWidth: 1, 
+    borderColor: "#e0e7ef", 
   },
   cellText: {
     fontSize: 15,
