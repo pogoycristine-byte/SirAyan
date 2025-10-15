@@ -23,7 +23,7 @@ export default function Account({ navigation }) {
   const users = [
     { username: "jayian", password: "teacher123", role: "teacher", name: "Jayian Teacher", section: "Faculty" },
     { username: "carl", password: "philip", role: "student", name: "Carl Philip Romanda", section: "BSIT-3 Block-01" },
-    { username: "pogoycristine", password: "leader123", role: "student", name: "Cristine Pogoy", section: "BSIT-3 Block-01" },
+    { username: "pogoycristine", password: "pogs", role: "student", name: "Cristine Pogoy", section: "BSIT-3 Block-01" },
     { username: "jubelle", password: "franze", role: "student", name: "Jubelle Franze", section: "BSIT-3 Block-01" },
     { username: "student2", password: "student1234", role: "student", name: "Student Two", section: "BSIT-3 Block-01" },
   ];
