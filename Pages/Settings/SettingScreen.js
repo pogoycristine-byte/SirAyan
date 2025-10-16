@@ -12,18 +12,56 @@ import Logout from "./Logout";
 export default function SettingsScreen() {
   const [activeScreen, setActiveScreen] = useState("Settings");
 
+  const handleBack = () => setActiveScreen("Settings");
+
+  const renderHeader = (title) => (
+    <View style={styles.header}>
+      {activeScreen !== "Settings" && (
+        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="black" />
+        </TouchableOpacity>
+      )}
+      <Text style={styles.headerText}>{title}</Text>
+    </View>
+  );
+
   const renderScreen = () => {
     switch (activeScreen) {
       case "Account":
-        return <Account />;
+        return (
+          <View style={styles.container}>
+            {renderHeader("Account")}
+            <Account />
+          </View>
+        );
       case "Security":
-        return <Security />;
+        return (
+          <View style={styles.container}>
+            {renderHeader("Security")}
+            <Security />
+          </View>
+        );
       case "Support":
-        return <Support />;
+        return (
+          <View style={styles.container}>
+            {renderHeader("Help and Support")}
+            <Support />
+          </View>
+        );
       case "About":
-        return <About />;
+        return (
+          <View style={styles.container}>
+            {renderHeader("About Us")}
+            <About />
+          </View>
+        );
       case "Logout":
-        return <Logout onBack={() => setActiveScreen("Settings")} />;
+        return (
+          <View style={styles.container}>
+            {renderHeader("Logout")}
+            <Logout onBack={handleBack} />
+          </View>
+        );
       default:
         return renderSettingsMenu();
     }
@@ -39,12 +77,13 @@ export default function SettingsScreen() {
 
   const renderSettingsMenu = () => (
     <View style={styles.container}>
-      <View style={styles.header}>
+      {renderHeader("Settings")}
+
+      <View style={styles.profileSection}>
         <Image
           source={{ uri: "https://placekitten.com/100/100" }}
           style={styles.profileImage}
         />
-        <Text style={styles.headerText}>Settings</Text>
       </View>
 
       <View style={styles.menu}>
@@ -74,10 +113,27 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff", paddingTop: 50 },
-  header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 20 },
-  profileImage: { width: 40, height: 40, borderRadius: 20, marginRight: 10 },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    marginBottom: 10,
+  },
+  backButton: {
+    marginRight: 10,
+    padding: 5,
+  },
   headerText: { fontSize: 24, fontWeight: "bold" },
-  menu: { marginTop: 30, paddingHorizontal: 20 },
+  profileSection: {
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  profileImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+  },
+  menu: { marginTop: 10, paddingHorizontal: 20 },
   menuItem: {
     paddingVertical: 15,
     borderBottomWidth: 1,
