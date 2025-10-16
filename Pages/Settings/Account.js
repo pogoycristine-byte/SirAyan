@@ -11,9 +11,9 @@ import {
 import * as ImagePicker from "expo-image-picker";
 
 export default function ProfileSettings() {
-  const [fullName, setFullName] = useState("Juan Dela Cruz");
-  const [studentId] = useState("2025-00123");
-  const [department] = useState("Computer Science");
+  const [fullName, setFullName] = useState("Genie Mae Crompido");
+  const [studentId] = useState("23-001223");
+  const [department] = useState("CCS");
   const [profilePhoto, setProfilePhoto] = useState(null);
 
   const pickImage = async () => {
