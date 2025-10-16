@@ -139,7 +139,7 @@ const Reports = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F0F6FF', paddingTop: 10 },
+  container: { flex: 1, backgroundColor: '#F0F6FF', paddingTop: 45 },
   headerContainer: { paddingHorizontal: 15, paddingBottom: 10 },
   title: { fontSize: 24, fontWeight: '800', color: '#1E3A8A', textAlign: 'center', marginBottom: 20 },
   buttonRow: {

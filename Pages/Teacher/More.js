@@ -286,7 +286,7 @@ const More = () => {
 
 const styles = StyleSheet.create({
   headerGradient: { paddingVertical: 5, paddingHorizontal: 20, elevation: 5 },
-  header: { flexDirection: "row", alignItems: "center", marginTop: 3 },
+  header: { flexDirection: "row", alignItems: "center", marginTop: 39 },
   profileImage: { width: 50, height: 50, borderRadius: 25, backgroundColor: "#fff" },
   headerText: { color: "#DCE7FF", fontSize: 13 },
   teacherName: { color: "#fff", fontSize: 18, fontWeight: "bold" },

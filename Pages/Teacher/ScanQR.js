@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "linear-gradient(180deg, #E3E9FF 0%, #F7F9FF 100%)",
     alignItems: "center",
-    paddingTop: 50,
+    paddingTop: 100,
   },
   centered: {
     flex: 1,

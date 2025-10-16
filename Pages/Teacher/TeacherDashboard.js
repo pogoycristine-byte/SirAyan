@@ -6,7 +6,6 @@ import {
   StyleSheet,
   Image,
   Alert,
-  ScrollView,
   StatusBar,
   FlatList,
 } from "react-native";
@@ -105,7 +104,8 @@ function DashboardMain() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar backgroundColor="#1E3A8A" barStyle="light-content" />
-      <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}>
+      {/* Replaced ScrollView with View */}
+      <View style={{ flex: 1, paddingBottom: insets.bottom + 20 }}>
         <LinearGradient colors={["#2563EB", "#1E3A8A"]} style={styles.headerGradient}>
           <View style={styles.header}>
             <View style={styles.headerLeft}>
@@ -180,10 +180,10 @@ function DashboardMain() {
             data={recentAttendance}
             renderItem={renderStudent}
             keyExtractor={(item) => item.id}
-            scrollEnabled={false}
+            scrollEnabled={false} // keep FlatList non-scrollable
           />
         </View>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }

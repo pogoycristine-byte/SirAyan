@@ -180,8 +180,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F0F4FF",
-    padding: 20,
-    paddingTop: 20,
+    padding: 0,
+    paddingTop: 50,
   },
   header: {
     fontSize: 24,
