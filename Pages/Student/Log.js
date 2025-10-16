@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff", // white background
     paddingHorizontal: 20,
-    paddingTop: 50,   // increased top padding to move content lower
+    paddingTop: 15,   // increased top padding to move content lower
     paddingBottom: 25,
   },
   tableHeader: {

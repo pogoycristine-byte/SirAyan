@@ -5,13 +5,13 @@ export default function Splash({ navigation }) {
   useEffect(() => {
     const timer = setTimeout(() => {
       navigation.replace("Account");
-    }, 2000);
+    }, 7000);
     return () => clearTimeout(timer);
   }, [navigation]);
 
   return (
     <ImageBackground
-      source={require("../../assets/frontcover.png")}
+      source={require("../../assets/2.png")}
       style={styles.background}
       resizeMode="cover"
     >

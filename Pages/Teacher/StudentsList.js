@@ -181,13 +181,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F0F4FF",
     padding: 20,
-    paddingTop: 60,
+    paddingTop: 20,
   },
   header: {
     fontSize: 24,
     fontWeight: "bold",
     color: "#1E3A8A",
-    marginBottom: 10,
+    marginBottom: 20,
   },
   searchContainer: {
     flexDirection: "row",

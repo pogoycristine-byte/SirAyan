@@ -65,13 +65,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f0f4f7",
-    paddingTop: 50,
+    paddingTop: 10,
     paddingHorizontal: 20,
   },
   header: {
     fontSize: 24,
     fontWeight: "bold",
-    marginBottom: 20,
+    marginBottom: 10,
   },
   notification: {
     flexDirection: "row",
