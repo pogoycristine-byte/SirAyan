@@ -9,7 +9,6 @@ import About from "./SulodsaMore/About";
 export default function More() {
   const [activeScreen, setActiveScreen] = useState("Settings");
 
-  // Function to go back to More page
   const goBack = () => setActiveScreen("Settings");
 
   const renderScreen = () => {

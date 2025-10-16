@@ -6,7 +6,6 @@ import {
   StyleSheet,
   Image,
   Alert,
-  ScrollView,
   StatusBar,
   Dimensions,
 } from "react-native";
@@ -106,7 +105,8 @@ function DashboardMain({ route }) {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar backgroundColor="#1E3A8A" barStyle="light-content" />
-      <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}>
+      
+      <View style={{ flex: 1, paddingBottom: insets.bottom + 20 }}>
         <LinearGradient colors={["#2563EB", "#1E3A8A"]} style={styles.headerGradient}>
           <View style={styles.header}>
             <View style={styles.headerLeft}>
@@ -174,7 +174,7 @@ function DashboardMain({ route }) {
             </TouchableOpacity>
           </View>
         </View>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }

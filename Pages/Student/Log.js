@@ -64,14 +64,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff", // white background
     paddingHorizontal: 20,
-    paddingTop: 15,   // increased top padding to move content lower
+    paddingTop: 55,   // increased top padding to move content lower
     paddingBottom: 25,
   },
   tableHeader: {
     flexDirection: "row",
     borderBottomWidth: 2,
     borderColor: "#3b82f6", // blue border
-    paddingBottom: 8,
+    paddingBottom: 20,
     marginBottom: 5,
   },
   headerText: {

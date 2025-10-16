@@ -13,19 +13,37 @@ import {
   Platform,
 } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
+import * as FileSystem from "expo-file-system";
 
 export default function AttachLetter({ studentId }) {
   const [file, setFile] = useState(null);
+  const [fileContent, setFileContent] = useState(""); // For TXT preview
   const [uploading, setUploading] = useState(false);
 
   const pickFile = async () => {
     try {
       const res = await DocumentPicker.getDocumentAsync({
-        type: ["application/pdf", "text/plain"],
+        type: [
+          "application/pdf",
+          "text/plain",
+          "application/msword",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "application/vnd.ms-excel",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "application/vnd.ms-powerpoint",
+          "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        ],
       });
 
       if (res.type === "success") {
         setFile({ name: res.name || "Unnamed File", uri: res.uri, size: res.size });
+
+        if (res.mimeType === "text/plain" || res.name.endsWith(".txt")) {
+          const content = await FileSystem.readAsStringAsync(res.uri);
+          setFileContent(content);
+        } else {
+          setFileContent(""); // reset content for non-TXT files
+        }
       }
     } catch (err) {
       console.error(err);
@@ -33,20 +51,32 @@ export default function AttachLetter({ studentId }) {
     }
   };
 
-  const removeFile = () => setFile(null);
+  const removeFile = () => {
+    setFile(null);
+    setFileContent("");
+  };
 
   const uploadFile = async () => {
     if (!file) return Alert.alert("No file selected", "Please attach a file first.");
 
     setUploading(true);
     try {
-      // Simulate upload delay
       await new Promise((resolve) => setTimeout(resolve, 1500));
       Alert.alert("Success", `Uploaded: ${file.name}`);
       setFile(null);
+      setFileContent("");
     } finally {
       setUploading(false);
     }
+  };
+
+  const getFileIcon = (name) => {
+    if (name.endsWith(".pdf")) return "https://cdn-icons-png.flaticon.com/512/337/337946.png";
+    if (name.endsWith(".txt")) return "https://cdn-icons-png.flaticon.com/512/136/136538.png";
+    if (name.endsWith(".doc") || name.endsWith(".docx")) return "https://cdn-icons-png.flaticon.com/512/732/732220.png";
+    if (name.endsWith(".xls") || name.endsWith(".xlsx")) return "https://cdn-icons-png.flaticon.com/512/732/732233.png";
+    if (name.endsWith(".ppt") || name.endsWith(".pptx")) return "https://cdn-icons-png.flaticon.com/512/732/732205.png";
+    return "https://cdn-icons-png.flaticon.com/512/230/230322.png"; // generic document icon
   };
 
   return (
@@ -65,19 +95,27 @@ export default function AttachLetter({ studentId }) {
                   source={{ uri: "https://cdn-icons-png.flaticon.com/512/109/109612.png" }}
                   style={styles.icon}
                 />
-                <Text style={styles.placeholder}>Tap to select your PDF/TXT file</Text>
+                <Text style={styles.placeholder}>Tap to select your document</Text>
                 <Text style={styles.helperText}>Maximum file size: 5MB</Text>
               </View>
             ) : (
               <View style={styles.fileInfo}>
-                <Image
-                  source={{ uri: "https://cdn-icons-png.flaticon.com/512/337/337946.png" }}
-                  style={styles.fileIcon}
-                />
+                <Image source={{ uri: getFileIcon(file.name) }} style={styles.fileIcon} />
                 <Text style={styles.fileName}>{file.name}</Text>
                 {file.size && (
                   <Text style={styles.fileSize}>{(file.size / 1024).toFixed(2)} KB</Text>
                 )}
+
+                {fileContent ? (
+                  <View style={styles.textPreview}>
+                    <ScrollView>
+                      <Text>{fileContent}</Text>
+                    </ScrollView>
+                  </View>
+                ) : (
+                  <Text style={styles.helperText}>File attached</Text>
+                )}
+
                 <TouchableOpacity style={styles.removeButton} onPress={removeFile}>
                   <Text style={styles.buttonText}>Remove File</Text>
                 </TouchableOpacity>
@@ -90,15 +128,11 @@ export default function AttachLetter({ studentId }) {
             onPress={uploadFile}
             disabled={uploading || !file}
           >
-            {uploading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>Submit Excuse Letter</Text>
-            )}
+            {uploading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit Excuse Letter</Text>}
           </TouchableOpacity>
 
           <Text style={styles.note}>
-            Please ensure your excuse letter is clear and valid. Only PDF or TXT files are allowed.
+            Please ensure your document is clear and valid. Supported types: PDF, TXT, Word, Excel, PowerPoint.
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -159,4 +193,15 @@ const styles = StyleSheet.create({
   },
   buttonText: { color: "#fff", fontWeight: "600", fontSize: 16 },
   note: { fontSize: 12, color: "#64748B", textAlign: "center", marginTop: 15, paddingHorizontal: 10 },
+  textPreview: {
+    marginTop: 10,
+    maxHeight: 120,
+    width: "90%",
+    borderWidth: 1,
+    borderColor: "#3B82F6",
+    borderRadius: 8,
+    padding: 8,
+    backgroundColor: "#F0F9FF",
+    flexShrink: 0,
+  },
 });
