@@ -10,7 +10,6 @@ export default function More() {
   const [activeScreen, setActiveScreen] = useState("Settings");
 
   const goBack = () => setActiveScreen("Settings");
-
   const renderScreen = () => {
     switch (activeScreen) {
       case "Account":
