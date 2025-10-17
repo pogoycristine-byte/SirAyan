@@ -1,4 +1,3 @@
-// Pages/Settings/ChangePassword.js
 import React, { useState } from "react";
 import {
   View,
@@ -26,7 +25,6 @@ export default function Security() {
       return;
     }
 
-    // Simulate password update (replace with actual backend logic)
     Alert.alert("Success", "Your password has been updated.");
     setCurrentPassword("");
     setNewPassword("");

@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
 import { Ionicons, MaterialIcons, Entypo } from "@expo/vector-icons";
 
-// Import your screen components
 import Account from "./Account";
 import Security from "./Security";
 import Support from "./Support";
@@ -18,7 +17,7 @@ export default function SettingsScreen() {
     <View style={styles.header}>
       {activeScreen !== "Settings" && (
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="black" />
+          <Ionicons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
       )}
       <Text style={styles.headerText}>{title}</Text>
@@ -55,13 +54,7 @@ export default function SettingsScreen() {
             <About />
           </View>
         );
-      case "Logout":
-        return (
-          <View style={styles.container}>
-            {renderHeader("Logout")}
-            <Logout onBack={handleBack} />
-          </View>
-        );
+
       default:
         return renderSettingsMenu();
     }
@@ -72,19 +65,11 @@ export default function SettingsScreen() {
     { label: "Security", key: "Security" },
     { label: "Help and support", key: "Support" },
     { label: "About Us", key: "About" },
-    { label: "Logout", key: "Logout" },
   ];
 
   const renderSettingsMenu = () => (
     <View style={styles.container}>
       {renderHeader("Settings")}
-
-      <View style={styles.profileSection}>
-        <Image
-          source={{ uri: "https://placekitten.com/100/100" }}
-          style={styles.profileImage}
-        />
-      </View>
 
       <View style={styles.menu}>
         {menuItems.map(({ label, key }, index) => (
@@ -96,6 +81,13 @@ export default function SettingsScreen() {
             <Text style={styles.menuText}>{label}</Text>
           </TouchableOpacity>
         ))}
+      </View>
+
+      <View style={styles.profileSection}>
+        <Image
+          source={{ uri: "https://placekitten.com/100/100" }}
+          style={styles.profileImage}
+        />
       </View>
 
       <View style={styles.navBar}>
@@ -112,34 +104,48 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff", paddingTop: 50 },
+  container: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 20,
-    marginBottom: 10,
+    paddingTop: 20,
+    paddingBottom: 15,
+    backgroundColor: "#007AFF",
   },
   backButton: {
     marginRight: 10,
     padding: 5,
   },
-  headerText: { fontSize: 24, fontWeight: "bold" },
+  headerText: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#fff",
+  },
+  menu: {
+    paddingHorizontal: 20,
+    marginTop: 10,
+  },
+  menuItem: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+  menuText: {
+    fontSize: 18,
+  },
   profileSection: {
     alignItems: "center",
-    marginBottom: 20,
+    marginVertical: 20,
   },
   profileImage: {
     width: 80,
     height: 80,
     borderRadius: 40,
   },
-  menu: { marginTop: 10, paddingHorizontal: 20 },
-  menuItem: {
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-  },
-  menuText: { fontSize: 18 },
   navBar: {
     flexDirection: "row",
     justifyContent: "space-around",
