@@ -7,7 +7,7 @@ export default function Notification() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Notification</Text>
+      <Text style={styles.title}>Notification ito</Text>
       <QRCode value={studentId} size={200} />
     </View>
   );
