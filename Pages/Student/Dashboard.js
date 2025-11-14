@@ -20,8 +20,8 @@ import Modal from "react-native-modal";
 import * as DocumentPicker from 'expo-document-picker';
 
 // Placeholder components
-import Notification from "./Notification";
-import AttachLetter from "./AttachLetter";
+import Notification from "./Schedule";
+import AttachLetter from "./Attendance";
 import More from "./More";
 
 const { width, height } = Dimensions.get("window");
@@ -70,7 +70,7 @@ function DashboardMain({ route }) {
     const [classCode, setClassCode] = useState("");
     const [joinModalVisible, setJoinModalVisible] = useState(false);
     const [attendance, setAttendance] = useState(null);
-    const [attachedFile, setAttachedFile] = useState(null); // New state for attached file
+    const [attachedFile, setAttachedFile] = useState(null);
 
     useEffect(() => {
         const now = new Date();
@@ -94,7 +94,6 @@ function DashboardMain({ route }) {
 
     const activeClass = joinedClasses.find(cls => cls.id === activeClassId);
 
-    // Initialize today's session for active class
     useEffect(() => {
         if (!activeClass) return;
 
@@ -116,7 +115,7 @@ function DashboardMain({ route }) {
 
         setJoinedClasses(updatedClasses);
         setAttendance(null);
-        setAttachedFile(null); // Reset attached file when switching classes
+        setAttachedFile(null);
     }, [activeClassId, today]);
 
     const handleAttendance = async (status) => {
@@ -180,7 +179,6 @@ function DashboardMain({ route }) {
 
     return (
         <View style={styles.mainContainer}>
-            {/* Only show top join button if there are classes */}
             <DashboardHeader
                 studentName={student.name}
                 insets={insets}
@@ -189,8 +187,6 @@ function DashboardMain({ route }) {
             />
 
             <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: 30 }]}>
-
-                {/* Placeholder if no classes joined */}
                 {joinedClasses.length === 0 && (
                     <View style={styles.emptyContainer}>
                         <Text style={styles.emptyTitle}>No classes joined yet</Text>
@@ -201,7 +197,6 @@ function DashboardMain({ route }) {
                     </View>
                 )}
 
-                {/* Render Class Cards */}
                 {joinedClasses.map(cls => {
                     const isActive = cls.id === activeClassId;
                     return (
@@ -228,7 +223,6 @@ function DashboardMain({ route }) {
                                         <Text style={styles.qrLabel}>Scan this code for attendance</Text>
                                     </View>
 
-                                    {/* Attendance Buttons */}
                                     <View style={styles.buttonRow}>
                                         <TouchableOpacity
                                             style={[styles.attendanceButton, attendance === "Present" && styles.presentButtonActive]}
@@ -255,7 +249,6 @@ function DashboardMain({ route }) {
                                         </Text>
                                     )}
 
-                                    {/* Attach Excuse Letter */}
                                     <TouchableOpacity style={[styles.joinClassButton, { marginTop: 15 }]} onPress={handleAttachFile}>
                                         <Text style={styles.joinClassButtonText}>Attach Excuse Letter</Text>
                                     </TouchableOpacity>
@@ -265,11 +258,10 @@ function DashboardMain({ route }) {
                                 </>
                             )}
 
-                            {/* Attendance History */}
                             {cls.sessions && cls.sessions.length > 0 && (
                                 <View style={{ marginTop: 10 }}>
                                     <Text style={{ fontWeight: "600", color: "#1E3A8A", marginBottom: 5 }}>Attendance History:</Text>
-                                    {cls.sessions.map((sess, idx) => (
+                                    {cls.sessions.map((sess) => (
                                         <View key={sess.id} style={styles.historyRow}>
                                             <Text style={{ flex: 1 }}>{sess.date}</Text>
                                             <Text style={{ fontWeight: "bold", color: sess.status === "Present" ? "#059669" : sess.status === "Absent" ? "#EF4444" : "#555" }}>
@@ -283,7 +275,6 @@ function DashboardMain({ route }) {
                     );
                 })}
 
-                {/* Join Class Modal */}
                 <Modal
                     isVisible={joinModalVisible}
                     onBackdropPress={() => setJoinModalVisible(false)}
@@ -326,7 +317,7 @@ export default function Dashboard() {
             <Ionicons name={focused ? "home" : "home-outline"} size={24} color={color} />
         ),
         Notification: ({ focused, color }) => (
-            <Ionicons name={focused ? "notifications" : "notifications-outline"} size={24} color={color} />
+            <Ionicons name={focused ? "calendar" : "calendar-outline"} size={24} color={color} />
         ),
         AttachLetter: ({ focused, color }) => (
             <MaterialIcons name={focused ? "attach-file" : "attachment"} size={24} color={color} />
@@ -363,8 +354,8 @@ export default function Dashboard() {
                     initialParams={{ user: route.params?.user }}
                     options={{ title: "Home" }}
                 />
-                <Tab.Screen name="Notification" component={Notification} />
-                <Tab.Screen name="AttachLetter" component={AttachLetter} options={{ title: "Letter" }} />
+                <Tab.Screen name="Notification" component={Notification} options={{ title: "Schedule" }} />
+                <Tab.Screen name="AttachLetter" component={AttachLetter} options={{ title: "Attendance" }} />
                 <Tab.Screen name="More" component={More} options={{ title: "Settings" }} />
             </Tab.Navigator>
         </View>
