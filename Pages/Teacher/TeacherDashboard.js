@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -11,19 +11,22 @@ import {
   TextInput,
   Alert,
   Platform,
+  Dimensions,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Ionicons, MaterialIcons, Feather } from "@expo/vector-icons";
 import Modal from "react-native-modal";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import { CameraView, useCameraPermissions } from "expo-camera";
 
-// local screens
+// Firebase imports
+import { collection, addDoc, query, where, getDocs, Timestamp, deleteDoc, doc } from "firebase/firestore";
+import { db } from "../../src/config/firebase";
 
+// local screens
 import StudentsList from "./Report";
 import More from "./More";
 import Subjects from "./Subjects";
@@ -34,23 +37,115 @@ const Notifications = StudentsList;
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
+const { width } = Dimensions.get("window");
+
+// TIME PICKER COMPONENT
+function TimePickerScroll({ value, onTimeChange, onClose }) {
+  const hourRef = useRef(null);
+  const minuteRef = useRef(null);
+
+  const hours = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0"));
+  const minutes = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, "0"));
+
+  const currentHour = value.getHours().toString().padStart(2, "0");
+  const currentMinute = value.getMinutes().toString().padStart(2, "0");
+
+  const handleHourScroll = (hour) => {
+    const newDate = new Date(value);
+    newDate.setHours(parseInt(hour));
+    onTimeChange(newDate);
+  };
+
+  const handleMinuteScroll = (minute) => {
+    const newDate = new Date(value);
+    newDate.setMinutes(parseInt(minute));
+    onTimeChange(newDate);
+  };
+
+  return (
+    <View style={styles.timePickerModal}>
+      <View style={styles.timePickerHeader}>
+        <Text style={styles.timePickerTitle}>Set Time</Text>
+        <TouchableOpacity onPress={onClose}>
+          <Text style={styles.timePickerClose}>Done</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.timePickerContainer}>
+        <ScrollView
+          ref={hourRef}
+          style={styles.timeColumn}
+          snapToInterval={50}
+          scrollEventThrottle={16}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={{ height: 100 }} />
+          {hours.map((hour) => (
+            <TouchableOpacity
+              key={hour}
+              onPress={() => handleHourScroll(hour)}
+              style={[styles.timeItem, hour === currentHour && styles.timeItemActive]}
+            >
+              <Text style={[styles.timeItemText, hour === currentHour && styles.timeItemTextActive]}>
+                {hour}
+              </Text>
+            </TouchableOpacity>
+          ))}
+          <View style={{ height: 100 }} />
+        </ScrollView>
+
+        <Text style={styles.timeSeparator}>:</Text>
+
+        <ScrollView
+          ref={minuteRef}
+          style={styles.timeColumn}
+          snapToInterval={50}
+          scrollEventThrottle={16}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={{ height: 100 }} />
+          {minutes.map((minute) => (
+            <TouchableOpacity
+              key={minute}
+              onPress={() => handleMinuteScroll(minute)}
+              style={[styles.timeItem, minute === currentMinute && styles.timeItemActive]}
+            >
+              <Text
+                style={[
+                  styles.timeItemText,
+                  minute === currentMinute && styles.timeItemTextActive,
+                ]}
+              >
+                {minute}
+              </Text>
+            </TouchableOpacity>
+          ))}
+          <View style={{ height: 100 }} />
+        </ScrollView>
+      </View>
+    </View>
+  );
+}
+
 function DashboardMain() {
   const navigation = useNavigation();
+  const route = useRoute();
   const insets = useSafeAreaInsets();
 
   const [teacher, setTeacher] = useState({ id: "", name: "Teacher", section: "" });
   const [today, setToday] = useState("");
   const [classes, setClasses] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
+  const [loadingClasses, setLoadingClasses] = useState(false);
 
   // Session fields
   const [sessionSubject, setSessionSubject] = useState("");
   const [sessionBlock, setSessionBlock] = useState("");
   const [sessionDays, setSessionDays] = useState([]);
   const [startTime, setStartTime] = useState(new Date());
-  const [endTime, setEndTime] = useState(new Date());
-  const [showStartPicker, setShowStartPicker] = useState(false);
-  const [showEndPicker, setShowEndPicker] = useState(false);
+  const [endTime, setEndTime] = useState(new Date(Date.now() + 3600000));
+  const [showStartTimePicker, setShowStartTimePicker] = useState(false);
+  const [showEndTimePicker, setShowEndTimePicker] = useState(false);
 
   // Camera scanner states
   const [cameraVisible, setCameraVisible] = useState(false);
@@ -66,7 +161,14 @@ function DashboardMain() {
         const currentUser = await AsyncStorage.getItem("currentUser");
         if (currentUser) {
           const user = JSON.parse(currentUser);
-          setTeacher({ id: user.id, name: user.name, section: user.section });
+          setTeacher({
+            id: user.uid,
+            name: user.fullname,
+            section: user.section,
+          });
+          
+          // Load sessions from Firebase
+          await loadSessions(user.uid);
         }
       } catch (error) {
         console.error("Error loading teacher data:", error);
@@ -75,44 +177,119 @@ function DashboardMain() {
     loadTeacherData();
 
     const now = new Date();
-    const formatted = now.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-    setToday(formatted);
+    setToday(
+      now.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    );
 
     if (!permission) requestPermission();
   }, [permission]);
 
-  const generateClassCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
+  // Load sessions from Firebase
+  const loadSessions = async (teacherId) => {
+    try {
+      setLoadingClasses(true);
+      const q = query(collection(db, "sessions"), where("teacherId", "==", teacherId));
+      const querySnapshot = await getDocs(q);
+      
+      const sessionsList = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        sessionsList.push({
+          id: doc.id,
+          name: `${data.subject} (${data.block})`,
+          block: data.block,
+          subject: data.subject,
+          days: Array.isArray(data.days) ? data.days.join(", ") : data.days || "",
+          startTime: data.startTime,
+          endTime: data.endTime,
+          code: data.code,
+          teacherId: data.teacherId,
+        });
+      });
+      
+      setClasses(sessionsList);
+    } catch (error) {
+      console.error("Error loading sessions:", error);
+      Alert.alert("Error", "Failed to load sessions");
+    } finally {
+      setLoadingClasses(false);
+    }
+  };
 
-  const handleCreateClass = () => {
+  const generateClassCode = () =>
+    Math.random().toString(36).substring(2, 8).toUpperCase();
+
+  const handleCreateClass = async () => {
     if (!sessionSubject || !sessionBlock || sessionDays.length === 0) {
       Alert.alert("Incomplete Fields", "Please fill in all session details.");
       return;
     }
-    const newClass = {
-      id: Date.now().toString(),
-      name: `${sessionSubject} (${sessionBlock})`,
-      block: sessionBlock,
-      subject: sessionSubject,
-      days: sessionDays.join(", "),
-      startTime: startTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      endTime: endTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      code: generateClassCode(),
-    };
-    setClasses((prev) => [...prev, newClass]);
-    setSessionSubject("");
-    setSessionBlock("");
-    setSessionDays([]);
-    setStartTime(new Date());
-    setEndTime(new Date());
-    setModalVisible(false);
+
+    try {
+      setLoading(true);
+
+      // Save to Firebase
+      const docRef = await addDoc(collection(db, "sessions"), {
+        subject: sessionSubject,
+        block: sessionBlock,
+        days: sessionDays, // Array
+        startTime: startTime.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        endTime: endTime.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        code: generateClassCode(),
+        teacherId: teacher.id,
+        isActive: true,
+        createdAt: Timestamp.now(),
+      });
+
+      const newClass = {
+        id: docRef.id,
+        name: `${sessionSubject} (${sessionBlock})`,
+        block: sessionBlock,
+        subject: sessionSubject,
+        days: sessionDays.join(", "),
+        startTime: startTime.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        endTime: endTime.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        code: generateClassCode(),
+      };
+
+      setClasses((prev) => [...prev, newClass]);
+      
+      // Reset form
+      setSessionSubject("");
+      setSessionBlock("");
+      setSessionDays([]);
+      setStartTime(new Date());
+      setEndTime(new Date(Date.now() + 3600000));
+      setModalVisible(false);
+
+      Alert.alert("Success", "Session created successfully!");
+    } catch (error) {
+      console.error("Error creating session:", error);
+      Alert.alert("Error", "Failed to create session: " + error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const toggleDay = (day) => {
-    if (sessionDays.includes(day)) setSessionDays(sessionDays.filter((d) => d !== day));
+    if (sessionDays.includes(day))
+      setSessionDays(sessionDays.filter((d) => d !== day));
     else setSessionDays([...sessionDays, day]);
   };
 
@@ -123,7 +300,7 @@ function DashboardMain() {
       const qrCode = await getQRCodeByCode(data);
       if (qrCode) {
         Alert.alert("Success", `QR Code scanned for class: ${qrCode.classId}`);
-        setCameraVisible(false); // <-- Auto close scanner
+        setCameraVisible(false);
       } else {
         Alert.alert("Invalid QR Code", "This QR code is not recognized.");
       }
@@ -135,23 +312,74 @@ function DashboardMain() {
     }
   };
 
+  const handleDeleteClass = async (classId, className) => {
+    Alert.alert(
+      "Delete Class",
+      `Are you sure you want to delete "${className}"? This action cannot be undone.`,
+      [
+        { text: "Cancel", onPress: () => {}, style: "cancel" },
+        {
+          text: "Delete",
+          onPress: async () => {
+            try {
+              setLoading(true);
+              // Delete from Firebase
+              await deleteDoc(doc(db, "sessions", classId));
+              
+              // Remove from local state
+              setClasses((prev) => prev.filter((c) => c.id !== classId));
+              
+              Alert.alert("Success", "Class deleted successfully!");
+            } catch (error) {
+              console.error("Error deleting class:", error);
+              Alert.alert("Error", "Failed to delete class: " + error.message);
+            } finally {
+              setLoading(false);
+            }
+          },
+          style: "destructive",
+        },
+      ]
+    );
+  };
+
   const renderClassCard = ({ item }) => (
     <View style={styles.classCardUnique}>
+      {/* Delete Icon - Upper Right Corner */}
+      <TouchableOpacity
+        style={styles.deleteIconContainer}
+        onPress={() => handleDeleteClass(item.id, item.name)}
+        disabled={loading}
+      >
+        <Ionicons name="trash" size={20} color="#EF4444" />
+      </TouchableOpacity>
+
       <Text style={styles.classTitleUnique}>{item.name}</Text>
-      <Text style={styles.classDetailsUnique}>{item.subject} - Block {item.block}</Text>
+      <Text style={styles.classDetailsUnique}>
+        {item.subject} - Block {item.block}
+      </Text>
       <Text style={styles.classDetailsUnique}>Days: {item.days}</Text>
-      <Text style={styles.classDetailsUnique}>Time: {item.startTime} - {item.endTime}</Text>
+      <Text style={styles.classDetailsUnique}>
+        Time: {item.startTime} - {item.endTime}
+      </Text>
       <Text style={styles.classCodeUnique}>Class Code: {item.code}</Text>
 
       <TouchableOpacity
         style={styles.manageBtnUnique}
-        onPress={() => navigation.navigate("ManageStudentsScreen", { classInfo: item })}
+        onPress={() =>
+          navigation.navigate("ManageStudentsScreen", { classInfo: item })
+        }
       >
-        <Text style={{ color: "#fff", fontWeight: "bold" }}>Manage Students</Text>
+        <Text style={{ color: "#fff", fontWeight: "bold" }}>
+          Manage Students
+        </Text>
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={[styles.manageBtnUnique, { backgroundColor: "#2563EB", marginTop: 8 }]}
+        style={[
+          styles.manageBtnUnique,
+          { backgroundColor: "#2563EB", marginTop: 8 },
+        ]}
         onPress={() => {
           setCameraVisible(true);
           setScanned(false);
@@ -167,27 +395,32 @@ function DashboardMain() {
       <StatusBar backgroundColor="#F0F4FF" barStyle="dark-content" />
 
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}>
-        {/* Header */}
         <View style={{ paddingHorizontal: 20, paddingTop: insets.top - 15, paddingBottom: 15 }}>
           <View style={styles.headerUnique}>
             <View style={styles.headerLeftUnique}>
               <Image
-                source={{ uri: "https://cdn-icons-png.flaticon.com/512/3135/3135715.png" }}
+                source={{
+                  uri: "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+                }}
                 style={styles.profileImageUnique}
               />
-              <View style={{ justifyContent: "center" }}>
-                <Text style={[styles.headerTextUnique, { color: "#333" }]}>Welcome back,</Text>
-                <Text style={[styles.teacherNameUnique, { color: "#000" }]}>{teacher.name}</Text>
-                <Text style={[styles.departmentTextUnique, { color: "#555" }]}>Department: {teacher.section}</Text>
+              <View>
+                <Text style={styles.headerTextUnique}>Welcome back,</Text>
+                <Text style={styles.teacherNameUnique}>{teacher.name}</Text>
+                <Text style={styles.departmentTextUnique}>
+                  Department: {teacher.section}
+                </Text>
               </View>
             </View>
           </View>
         </View>
 
-        {/* Action Buttons */}
         <View style={styles.actionButtonsUnique}>
           <TouchableOpacity
-            style={[styles.actionCardUnique, { backgroundColor: "#2563EB", paddingVertical: 25, minHeight: 120 }]}
+            style={[
+              styles.actionCardUnique,
+              { backgroundColor: "#2563EB", paddingVertical: 25, minHeight: 120 },
+            ]}
             onPress={() => setModalVisible(true)}
           >
             <Ionicons name="play-circle-outline" size={38} color="#fff" />
@@ -195,13 +428,18 @@ function DashboardMain() {
           </TouchableOpacity>
         </View>
 
-        {/* Classes */}
         <View style={styles.cardUnique}>
           <Text style={styles.dateTextUnique}>{today}</Text>
           <Text style={styles.attendanceTitleUnique}>Your Classes</Text>
 
-          {classes.length === 0 ? (
-            <Text style={{ textAlign: "center", color: "#777", marginTop: 15 }}>No classes created yet.</Text>
+          {loadingClasses ? (
+            <Text style={{ textAlign: "center", color: "#777", marginTop: 15 }}>
+              Loading sessions...
+            </Text>
+          ) : classes.length === 0 ? (
+            <Text style={{ textAlign: "center", color: "#777", marginTop: 15 }}>
+              No classes created yet.
+            </Text>
           ) : (
             <FlatList
               data={classes}
@@ -213,7 +451,6 @@ function DashboardMain() {
           )}
         </View>
 
-        {/* Modal */}
         <Modal
           isVisible={modalVisible}
           onBackdropPress={() => setModalVisible(false)}
@@ -238,8 +475,10 @@ function DashboardMain() {
               onChangeText={setSessionBlock}
             />
 
-            <Text style={{ marginVertical: 8, fontWeight: "600" }}>Select Days:</Text>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", marginBottom: 8 }}>
+            <Text style={{ marginVertical: 8, fontWeight: "600" }}>
+              Select Days:
+            </Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
               {daysOfWeek.map((day) => (
                 <TouchableOpacity
                   key={day}
@@ -249,55 +488,86 @@ function DashboardMain() {
                     margin: 4,
                     borderRadius: 6,
                     borderWidth: 1,
-                    borderColor: sessionDays.includes(day) ? "#2563EB" : "#CBD5E1",
-                    backgroundColor: sessionDays.includes(day) ? "#2563EB" : "#F8FAFC",
+                    borderColor: sessionDays.includes(day)
+                      ? "#2563EB"
+                      : "#CBD5E1",
+                    backgroundColor: sessionDays.includes(day)
+                      ? "#2563EB"
+                      : "#F8FAFC",
                   }}
                 >
-                  <Text style={{ color: sessionDays.includes(day) ? "#fff" : "#000" }}>{day}</Text>
+                  <Text
+                    style={{
+                      color: sessionDays.includes(day) ? "#fff" : "#000",
+                    }}
+                  >
+                    {day}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            <Text style={{ marginVertical: 8, fontWeight: "600" }}>Start Time:</Text>
-            <TouchableOpacity style={styles.inputUnique} onPress={() => setShowStartPicker(true)}>
-              <Text>{startTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</Text>
+            <Text style={{ marginVertical: 8, fontWeight: "600" }}>
+              Start Time:
+            </Text>
+
+            <TouchableOpacity
+              style={styles.inputUnique}
+              onPress={() => setShowStartTimePicker(true)}
+            >
+              <Text>
+                {startTime.toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </Text>
             </TouchableOpacity>
-            {showStartPicker && (
-              <DateTimePicker
+
+            {showStartTimePicker && (
+              <TimePickerScroll
                 value={startTime}
-                mode="time"
-                display={Platform.OS === "ios" ? "spinner" : "default"}
-                onChange={(event, selectedDate) => {
-                  setShowStartPicker(Platform.OS === "ios");
-                  if (selectedDate) setStartTime(selectedDate);
-                }}
+                onTimeChange={setStartTime}
+                onClose={() => setShowStartTimePicker(false)}
               />
             )}
 
-            <Text style={{ marginVertical: 8, fontWeight: "600" }}>End Time:</Text>
-            <TouchableOpacity style={styles.inputUnique} onPress={() => setShowEndPicker(true)}>
-              <Text>{endTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</Text>
+            <Text style={{ marginVertical: 8, fontWeight: "600" }}>
+              End Time:
+            </Text>
+
+            <TouchableOpacity
+              style={styles.inputUnique}
+              onPress={() => setShowEndTimePicker(true)}
+            >
+              <Text>
+                {endTime.toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </Text>
             </TouchableOpacity>
-            {showEndPicker && (
-              <DateTimePicker
+
+            {showEndTimePicker && (
+              <TimePickerScroll
                 value={endTime}
-                mode="time"
-                display={Platform.OS === "ios" ? "spinner" : "default"}
-                onChange={(event, selectedDate) => {
-                  setShowEndPicker(Platform.OS === "ios");
-                  if (selectedDate) setEndTime(selectedDate);
-                }}
+                onTimeChange={setEndTime}
+                onClose={() => setShowEndTimePicker(false)}
               />
             )}
 
-            <TouchableOpacity style={styles.createButtonUnique} onPress={handleCreateClass}>
-              <Text style={styles.createButtonTextUnique}>Create Session</Text>
+            <TouchableOpacity
+              style={styles.createButtonUnique}
+              onPress={handleCreateClass}
+              disabled={loading}
+            >
+              <Text style={styles.createButtonTextUnique}>
+                {loading ? "Creating..." : "Create Session"}
+              </Text>
             </TouchableOpacity>
           </View>
         </Modal>
       </ScrollView>
 
-      {/* Camera Overlay */}
       {cameraVisible && permission?.granted && (
         <View style={styles.cameraContainer}>
           <CameraView
@@ -308,13 +578,21 @@ function DashboardMain() {
           <View style={styles.overlay}>
             <View style={styles.scanFrame} />
             <Text style={styles.scanText}>Align QR Code</Text>
+
             {scanned && !loading && (
-              <TouchableOpacity style={styles.rescanButton} onPress={() => setScanned(false)}>
+              <TouchableOpacity
+                style={styles.rescanButton}
+                onPress={() => setScanned(false)}
+              >
                 <Text style={styles.rescanButtonText}>Tap to Rescan</Text>
               </TouchableOpacity>
             )}
+
             <TouchableOpacity
-              style={[styles.rescanButton, { bottom: 80, backgroundColor: "#F87171" }]}
+              style={[
+                styles.rescanButton,
+                { bottom: 80, backgroundColor: "#F87171" },
+              ]}
               onPress={() => setCameraVisible(false)}
             >
               <Text style={styles.rescanButtonText}>Close</Text>
@@ -336,7 +614,6 @@ function TeacherStack() {
   );
 }
 
-// Bottom Tabs
 export default function TeacherDashboard() {
   const insets = useSafeAreaInsets();
 
@@ -356,18 +633,44 @@ export default function TeacherDashboard() {
         },
         tabBarIcon: ({ color, focused }) => {
           const icons = {
-            DashboardTab: <Ionicons name={focused ? "home" : "home-outline"} size={24} color={color} />,
-            SubjectsTab: <Ionicons name={focused ? "book" : "book-outline"} size={24} color={color} />,
-            Reports: <MaterialIcons name="assessment" size={24} color={color} />,
+            DashboardTab: (
+              <Ionicons
+                name={focused ? "home" : "home-outline"}
+                size={24}
+                color={color}
+              />
+            ),
+            SubjectsTab: (
+              <Ionicons
+                name={focused ? "book" : "book-outline"}
+                size={24}
+                color={color}
+              />
+            ),
+            Reports: (
+              <MaterialIcons name="assessment" size={24} color={color} />
+            ),
             More: <Feather name="menu" size={24} color={color} />,
           };
           return icons[route.name] || null;
         },
       })}
     >
-      <Tab.Screen name="DashboardTab" component={TeacherStack} options={{ title: "Home" }} />
-      <Tab.Screen name="SubjectsTab" component={Subjects} options={{ title: "Subjects" }} />
-      <Tab.Screen name="Reports" component={Notifications} options={{ title: "Reports" }} />
+      <Tab.Screen
+        name="DashboardTab"
+        component={TeacherStack}
+        options={{ title: "Home" }}
+      />
+      <Tab.Screen
+        name="SubjectsTab"
+        component={Subjects}
+        options={{ title: "Subjects" }}
+      />
+      <Tab.Screen
+        name="Reports"
+        component={Notifications}
+        options={{ title: "Reports" }}
+      />
       <Tab.Screen name="More" component={More} />
     </Tab.Navigator>
   );
@@ -396,8 +699,8 @@ const styles = StyleSheet.create({
   inputUnique: { borderWidth: 1, borderColor: "#CBD5E1", borderRadius: 10, padding: 10, marginVertical: 5, backgroundColor: "#F8FAFC" },
   createButtonUnique: { backgroundColor: "#2563EB", paddingVertical: 12, borderRadius: 10, alignItems: "center", marginTop: 5 },
   createButtonTextUnique: { color: "#fff", fontWeight: "bold" },
-  centeredModalUnique: { justifyContent: "center", alignItems: "center" },
-  modalContentUnique: { width: "85%", backgroundColor: "#fff", padding: 20, borderRadius: 20, alignItems: "stretch" },
+  centeredModalUnique: { justifyContent: "center", alignItems: "center", paddingHorizontal: 0 },
+  modalContentUnique: { width: "85%", backgroundColor: "#fff", padding: 20, borderRadius: 20, alignItems: "stretch", maxHeight: "80%" },
   modalTitleUnique: { fontSize: 18, fontWeight: "700", marginBottom: 15, color: "#1E3A8A", textAlign: "center" },
   cameraContainer: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 999, backgroundColor: "#000" },
   overlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "center", alignItems: "center" },
@@ -405,4 +708,24 @@ const styles = StyleSheet.create({
   scanText: { color: "#fff", fontSize: 16, marginTop: 20, fontWeight: "600" },
   rescanButton: { position: "absolute", bottom: 30, backgroundColor: "#2563EB", paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8 },
   rescanButtonText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
+  timePickerModal: { backgroundColor: "#fff", borderRadius: 12, overflow: "hidden", width: width * 0.85 },
+  timePickerHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 12, paddingHorizontal: 16, backgroundColor: "#F0F4FF", borderBottomWidth: 1, borderBottomColor: "#E0E7FF" },
+  timePickerTitle: { fontSize: 16, fontWeight: "700", color: "#1E3A8A" },
+  timePickerClose: { fontSize: 14, fontWeight: "600", color: "#2563EB" },
+  timePickerContainer: { flexDirection: "row", justifyContent: "center", alignItems: "center", height: 250, paddingVertical: 10 },
+  timeColumn: { width: 60, height: 200 },
+  timeItem: { height: 50, justifyContent: "center", alignItems: "center" },
+  timeItemActive: { backgroundColor: "#E0E7FF", borderRadius: 8 },
+  timeItemText: { fontSize: 18, color: "#94A3B8", fontWeight: "500" },
+  timeItemTextActive: { fontSize: 20, color: "#2563EB", fontWeight: "700" },
+  timeSeparator: { fontSize: 24, fontWeight: "700", color: "#1E3A8A", marginHorizontal: 10 },
+  deleteIconContainer: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    zIndex: 10,
+    padding: 8,
+    borderRadius: 50,
+    backgroundColor: "#FEE2E2",
+  },
 });

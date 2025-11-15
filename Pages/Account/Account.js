@@ -13,10 +13,15 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
-import { getUserByUsername } from "../../src/services/database";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../../src/config/firebase";
+
+// NEW IMPORTS
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../../src/config/firebase";
 
 export default function Account({ navigation }) {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
@@ -27,8 +32,8 @@ export default function Account({ navigation }) {
       try {
         const savedUser = await AsyncStorage.getItem("rememberedUser");
         if (savedUser) {
-          const { username, password } = JSON.parse(savedUser);
-          setUsername(username);
+          const { email, password } = JSON.parse(savedUser);
+          setEmail(email);
           setPassword(password);
           setRememberMe(true);
         }
@@ -39,47 +44,52 @@ export default function Account({ navigation }) {
     loadRememberedUser();
   }, []);
 
+  // ✔ FIXED LOGIN FUNCTION
   const handleLogin = async () => {
-    if (!username.trim() || !password.trim()) {
-      Alert.alert("Error", "Please enter both username and password.");
+    if (!email.trim() || !password.trim()) {
+      Alert.alert("Error", "Please enter both email and password.");
       return;
     }
 
     setLoading(true);
 
     try {
-      const users = await getUserByUsername(username);
-      
-      if (users.length === 0) {
-        Alert.alert("Login Failed", "Invalid username or password. Try again.");
-        setLoading(false);
+      // 1. LOGIN WITH FIREBASE AUTH
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const firebaseUser = userCredential.user;
+
+      // 2. GET FIRESTORE USER USING UID
+      const userRef = doc(db, "users", firebaseUser.uid);
+      const userSnap = await getDoc(userRef);
+
+      if (!userSnap.exists()) {
+        Alert.alert("Profile Error", "User profile not found in Firestore.");
         return;
       }
 
-      const user = users[0];
-      
-      if (user.password === password) {
-        if (rememberMe) {
-          await AsyncStorage.setItem("rememberedUser", JSON.stringify({ username, password }));
-        } else {
-          await AsyncStorage.removeItem("rememberedUser");
-        }
+      const userProfile = userSnap.data();
+      console.log("User profile:", userProfile);
 
-        // Save current user to AsyncStorage
-        await AsyncStorage.setItem("currentUser", JSON.stringify(user));
-
-        if (user.role === "teacher") {
-          navigation.replace("TeacherDashboard", { user });
-        } else if (user.role === "student") {
-          navigation.replace("StudentDashboard", { user });
-        } else {
-          Alert.alert("Error", "No dashboard found for this user role.");
-        }
+      // 3. REMEMBER ME
+      if (rememberMe) {
+        await AsyncStorage.setItem("rememberedUser", JSON.stringify({ email, password }));
       } else {
-        Alert.alert("Login Failed", "Invalid username or password. Try again.");
+        await AsyncStorage.removeItem("rememberedUser");
       }
+
+      await AsyncStorage.setItem("currentUser", JSON.stringify(userProfile));
+
+      // 4. NAVIGATION BASED ON ROLE
+      if (userProfile.role === "teacher") {
+        navigation.replace("TeacherDashboard", { user: userProfile });
+      } else if (userProfile.role === "student") {
+        navigation.replace("StudentDashboard", { user: userProfile });
+      } else {
+        Alert.alert("Error", "No dashboard found for this user role.");
+      }
+
     } catch (error) {
-      Alert.alert("Error", "Login failed: " + error.message);
+      Alert.alert("Login Failed", error.message || "Login failed");
       console.error("Login error:", error);
     } finally {
       setLoading(false);
@@ -100,14 +110,15 @@ export default function Account({ navigation }) {
           </View>
 
           <View style={styles.inputContainer}>
-            <Ionicons name="person-outline" size={22} color="#2D4EFF" style={styles.inputIcon} />
+            <Ionicons name="mail-outline" size={22} color="#2D4EFF" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
-              placeholder="Username"
+              placeholder="Email"
               placeholderTextColor="#a0a0a0"
-              value={username}
-              onChangeText={setUsername}
+              value={email}
+              onChangeText={setEmail}
               autoCapitalize="none"
+              keyboardType="email-address"
               editable={!loading}
             />
           </View>
@@ -144,9 +155,9 @@ export default function Account({ navigation }) {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.loginButton, { opacity: username && password && !loading ? 1 : 0.6 }]}
+            style={[styles.loginButton, { opacity: email && password && !loading ? 1 : 0.6 }]}
             onPress={handleLogin}
-            disabled={!username || !password || loading}
+            disabled={!email || !password || loading}
           >
             {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.loginText}>Login</Text>}
           </TouchableOpacity>

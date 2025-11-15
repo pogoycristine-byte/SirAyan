@@ -82,11 +82,12 @@ function DashboardMain({ route }) {
         setToday(formatted);
     }, []);
 
+    // 🔵 FIXED: Set the student name using the user data from Firebase
     useEffect(() => {
         if (user) {
             setStudent({
                 id: user.id || user.username || "42-123456",
-                name: user.name || "Unknown User",
+                name: user.fullname || "User",  // <-- changed from fullName to fullname
                 section: user.section || "Unknown Section",
             });
         }
@@ -180,7 +181,7 @@ function DashboardMain({ route }) {
     return (
         <View style={styles.mainContainer}>
             <DashboardHeader
-                studentName={student.name}
+                studentName={student.name} // 🔵 Now correctly shows registered Name
                 insets={insets}
                 onJoinPress={() => setJoinModalVisible(true)}
                 showJoinButton={joinedClasses.length > 0}

@@ -1,4 +1,4 @@
-//brooookapoynaa
+//jahahaha
 import React, { useState, useEffect } from "react";
 import { StatusBar, View, ActivityIndicator } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";

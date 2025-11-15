@@ -1,103 +1,29 @@
-import * as SQLite from 'expo-sqlite';
+import { 
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  updateProfile
+} from "firebase/auth";
+import { 
+  collection, 
+  addDoc, 
+  query, 
+  where, 
+  getDocs, 
+  doc,
+  getDoc,
+  updateDoc,
+  Timestamp,
+  setDoc,
+  deleteDoc
+} from "firebase/firestore";
+import { auth, db } from "../config/firebase";
 
-let db = null;
-
-const getDB = async () => {
-  if (!db) {
-    db = await SQLite.openDatabaseAsync('attendify.db');
-  }
-  return db;
-};
-
+// Initialize DB (Firestore collections auto-create on first write, but this is a placeholder)
 export const initDB = async () => {
   try {
-    const database = await getDB();
-    
-    // Users table
-    await database.execAsync(`
-      CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        email TEXT UNIQUE NOT NULL,
-        role TEXT NOT NULL,
-        name TEXT NOT NULL,
-        section TEXT NOT NULL,
-        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-
-    // Students table
-    await database.execAsync(`
-      CREATE TABLE IF NOT EXISTS students (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        year TEXT NOT NULL,
-        block TEXT NOT NULL,
-        gender TEXT NOT NULL,
-        email TEXT NOT NULL,
-        teacherId INTEGER,
-        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(teacherId) REFERENCES users(id)
-      );
-    `);
-
-    // Attendance table
-    await database.execAsync(`
-      CREATE TABLE IF NOT EXISTS attendance (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        studentId INTEGER NOT NULL,
-        date TEXT NOT NULL,
-        status TEXT NOT NULL,
-        timeIn TEXT,
-        timeOut TEXT,
-        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(studentId) REFERENCES students(id)
-      );
-    `);
-
-    // QR Codes table
-    await database.execAsync(`
-      CREATE TABLE IF NOT EXISTS qrcodes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        code TEXT UNIQUE NOT NULL,
-        teacherId INTEGER NOT NULL,
-        classId TEXT,
-        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-        expiresAt DATETIME,
-        FOREIGN KEY(teacherId) REFERENCES users(id)
-      );
-    `);
-
-    // Excuse Letters table
-    await database.execAsync(`
-      CREATE TABLE IF NOT EXISTS excuseletters (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        studentId INTEGER NOT NULL,
-        reason TEXT NOT NULL,
-        dateSubmitted TEXT NOT NULL,
-        status TEXT DEFAULT 'pending',
-        attachmentPath TEXT,
-        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(studentId) REFERENCES students(id)
-      );
-    `);
-
-    // Reports table
-    await database.execAsync(`
-      CREATE TABLE IF NOT EXISTS reports (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        teacherId INTEGER NOT NULL,
-        title TEXT NOT NULL,
-        description TEXT,
-        type TEXT,
-        generatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(teacherId) REFERENCES users(id)
-      );
-    `);
-
-    console.log("Database initialized successfully");
-    return "Database initialized";
+    console.log("Firebase Firestore initialized and ready");
+    return true;
   } catch (error) {
     console.error("Database initialization error:", error);
     throw error;
@@ -105,14 +31,15 @@ export const initDB = async () => {
 };
 
 // ==================== USER OPERATIONS ====================
-export const addUser = async (username, password, email, role, name, section) => {
+// FIXED VERSION — does NOT create Firebase Auth user
+export const addUser = async (uid, userData) => {
   try {
-    const database = await getDB();
-    const result = await database.runAsync(
-      `INSERT INTO users (username, password, email, role, name, section) VALUES (?, ?, ?, ?, ?, ?)`,
-      [username, password, email, role, name, section]
-    );
-    return result;
+    await setDoc(doc(db, "users", uid), {
+      ...userData,
+      createdAt: Timestamp.now(),
+    });
+
+    return { uid, ...userData };
   } catch (error) {
     console.error("Add user error:", error);
     throw error;
@@ -121,26 +48,21 @@ export const addUser = async (username, password, email, role, name, section) =>
 
 export const getUserByUsername = async (username) => {
   try {
-    const database = await getDB();
-    const result = await database.getAllAsync(
-      `SELECT * FROM users WHERE username = ?`,
-      [username]
-    );
-    return result || [];
+    const q = query(collection(db, "users"), where("username", "==", username));
+    const snapshot = await getDocs(q);
+
+    if (snapshot.empty) return [];
+    return snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
   } catch (error) {
     console.error("Get user by username error:", error);
     throw error;
   }
 };
 
-export const getUserById = async (id) => {
+export const getUserById = async (uid) => {
   try {
-    const database = await getDB();
-    const result = await database.getFirstAsync(
-      `SELECT * FROM users WHERE id = ?`,
-      [id]
-    );
-    return result;
+    const docSnap = await getDoc(doc(db, "users", uid));
+    return docSnap.exists() ? { uid: docSnap.id, ...docSnap.data() } : null;
   } catch (error) {
     console.error("Get user by id error:", error);
     throw error;
@@ -149,9 +71,8 @@ export const getUserById = async (id) => {
 
 export const getAllUsers = async () => {
   try {
-    const database = await getDB();
-    const result = await database.getAllAsync(`SELECT * FROM users`);
-    return result || [];
+    const snapshot = await getDocs(collection(db, "users"));
+    return snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
   } catch (error) {
     console.error("Get all users error:", error);
     throw error;
@@ -161,12 +82,16 @@ export const getAllUsers = async () => {
 // ==================== STUDENT OPERATIONS ====================
 export const addStudent = async (name, year, block, gender, email, teacherId) => {
   try {
-    const database = await getDB();
-    const result = await database.runAsync(
-      `INSERT INTO students (name, year, block, gender, email, teacherId) VALUES (?, ?, ?, ?, ?, ?)`,
-      [name, year, block, gender, email, teacherId]
-    );
-    return result;
+    const docRef = await addDoc(collection(db, "students"), {
+      name,
+      year,
+      block,
+      gender,
+      email,
+      teacherId,
+      createdAt: Timestamp.now(),
+    });
+    return { id: docRef.id, name, year, block, gender, email, teacherId };
   } catch (error) {
     console.error("Add student error:", error);
     throw error;
@@ -175,17 +100,14 @@ export const addStudent = async (name, year, block, gender, email, teacherId) =>
 
 export const getAllStudents = async (teacherId = null) => {
   try {
-    const database = await getDB();
-    let result;
+    let q;
     if (teacherId) {
-      result = await database.getAllAsync(
-        `SELECT * FROM students WHERE teacherId = ?`,
-        [teacherId]
-      );
+      q = query(collection(db, "students"), where("teacherId", "==", teacherId));
     } else {
-      result = await database.getAllAsync(`SELECT * FROM students`);
+      q = query(collection(db, "students"));
     }
-    return result || [];
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
     console.error("Get all students error:", error);
     throw error;
@@ -194,12 +116,8 @@ export const getAllStudents = async (teacherId = null) => {
 
 export const getStudentById = async (id) => {
   try {
-    const database = await getDB();
-    const result = await database.getFirstAsync(
-      `SELECT * FROM students WHERE id = ?`,
-      [id]
-    );
-    return result;
+    const docSnap = await getDoc(doc(db, "students", id));
+    return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null;
   } catch (error) {
     console.error("Get student by id error:", error);
     throw error;
@@ -208,12 +126,10 @@ export const getStudentById = async (id) => {
 
 export const updateStudent = async (id, name, year, block, gender, email) => {
   try {
-    const database = await getDB();
-    const result = await database.runAsync(
-      `UPDATE students SET name = ?, year = ?, block = ?, gender = ?, email = ? WHERE id = ?`,
-      [name, year, block, gender, email, id]
-    );
-    return result;
+    await updateDoc(doc(db, "students", id), {
+      name, year, block, gender, email, updatedAt: Timestamp.now()
+    });
+    return { id, name, year, block, gender, email };
   } catch (error) {
     console.error("Update student error:", error);
     throw error;
@@ -222,12 +138,8 @@ export const updateStudent = async (id, name, year, block, gender, email) => {
 
 export const deleteStudent = async (id) => {
   try {
-    const database = await getDB();
-    const result = await database.runAsync(
-      `DELETE FROM students WHERE id = ?`,
-      [id]
-    );
-    return result;
+    await deleteDoc(doc(db, "students", id));
+    return true;
   } catch (error) {
     console.error("Delete student error:", error);
     throw error;
@@ -237,12 +149,15 @@ export const deleteStudent = async (id) => {
 // ==================== ATTENDANCE OPERATIONS ====================
 export const markAttendance = async (studentId, date, status, timeIn = null, timeOut = null) => {
   try {
-    const database = await getDB();
-    const result = await database.runAsync(
-      `INSERT INTO attendance (studentId, date, status, timeIn, timeOut) VALUES (?, ?, ?, ?, ?)`,
-      [studentId, date, status, timeIn, timeOut]
-    );
-    return result;
+    const docRef = await addDoc(collection(db, "attendance"), {
+      studentId,
+      date,
+      status,
+      timeIn,
+      timeOut,
+      createdAt: Timestamp.now(),
+    });
+    return { id: docRef.id, studentId, date, status, timeIn, timeOut };
   } catch (error) {
     console.error("Mark attendance error:", error);
     throw error;
@@ -251,14 +166,9 @@ export const markAttendance = async (studentId, date, status, timeIn = null, tim
 
 export const getAttendanceByDate = async (date) => {
   try {
-    const database = await getDB();
-    const result = await database.getAllAsync(
-      `SELECT a.*, s.name, s.email FROM attendance a 
-       JOIN students s ON a.studentId = s.id 
-       WHERE a.date = ?`,
-      [date]
-    );
-    return result || [];
+    const q = query(collection(db, "attendance"), where("date", "==", date));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
     console.error("Get attendance by date error:", error);
     throw error;
@@ -267,12 +177,9 @@ export const getAttendanceByDate = async (date) => {
 
 export const getAttendanceByStudent = async (studentId) => {
   try {
-    const database = await getDB();
-    const result = await database.getAllAsync(
-      `SELECT * FROM attendance WHERE studentId = ? ORDER BY date DESC`,
-      [studentId]
-    );
-    return result || [];
+    const q = query(collection(db, "attendance"), where("studentId", "==", studentId));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
     console.error("Get attendance by student error:", error);
     throw error;
@@ -281,12 +188,10 @@ export const getAttendanceByStudent = async (studentId) => {
 
 export const updateAttendance = async (id, status, timeOut = null) => {
   try {
-    const database = await getDB();
-    const result = await database.runAsync(
-      `UPDATE attendance SET status = ?, timeOut = ? WHERE id = ?`,
-      [status, timeOut, id]
-    );
-    return result;
+    await updateDoc(doc(db, "attendance", id), {
+      status, timeOut, updatedAt: Timestamp.now()
+    });
+    return { id, status, timeOut };
   } catch (error) {
     console.error("Update attendance error:", error);
     throw error;
@@ -296,12 +201,10 @@ export const updateAttendance = async (id, status, timeOut = null) => {
 // ==================== QR CODE OPERATIONS ====================
 export const addQRCode = async (code, teacherId, classId, expiresAt = null) => {
   try {
-    const database = await getDB();
-    const result = await database.runAsync(
-      `INSERT INTO qrcodes (code, teacherId, classId, expiresAt) VALUES (?, ?, ?, ?)`,
-      [code, teacherId, classId, expiresAt]
-    );
-    return result;
+    const docRef = await addDoc(collection(db, "qrcodes"), {
+      code, teacherId, classId, expiresAt, createdAt: Timestamp.now()
+    });
+    return { id: docRef.id, code, teacherId, classId, expiresAt };
   } catch (error) {
     console.error("Add QR code error:", error);
     throw error;
@@ -310,12 +213,11 @@ export const addQRCode = async (code, teacherId, classId, expiresAt = null) => {
 
 export const getQRCodeByCode = async (code) => {
   try {
-    const database = await getDB();
-    const result = await database.getFirstAsync(
-      `SELECT * FROM qrcodes WHERE code = ?`,
-      [code]
-    );
-    return result;
+    const q = query(collection(db, "qrcodes"), where("code", "==", code));
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) return null;
+    const doc = snapshot.docs[0];
+    return { id: doc.id, ...doc.data() };
   } catch (error) {
     console.error("Get QR code error:", error);
     throw error;
@@ -324,12 +226,9 @@ export const getQRCodeByCode = async (code) => {
 
 export const getQRCodesByTeacher = async (teacherId) => {
   try {
-    const database = await getDB();
-    const result = await database.getAllAsync(
-      `SELECT * FROM qrcodes WHERE teacherId = ? ORDER BY createdAt DESC`,
-      [teacherId]
-    );
-    return result || [];
+    const q = query(collection(db, "qrcodes"), where("teacherId", "==", teacherId));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
     console.error("Get QR codes by teacher error:", error);
     throw error;
@@ -339,12 +238,11 @@ export const getQRCodesByTeacher = async (teacherId) => {
 // ==================== EXCUSE LETTER OPERATIONS ====================
 export const addExcuseLetter = async (studentId, reason, dateSubmitted, attachmentPath = null) => {
   try {
-    const database = await getDB();
-    const result = await database.runAsync(
-      `INSERT INTO excuseletters (studentId, reason, dateSubmitted, attachmentPath) VALUES (?, ?, ?, ?)`,
-      [studentId, reason, dateSubmitted, attachmentPath]
-    );
-    return result;
+    const docRef = await addDoc(collection(db, "excuseletters"), {
+      studentId, reason, dateSubmitted, attachmentPath,
+      status: "pending", createdAt: Timestamp.now()
+    });
+    return { id: docRef.id, studentId, reason, dateSubmitted, status: "pending" };
   } catch (error) {
     console.error("Add excuse letter error:", error);
     throw error;
@@ -353,19 +251,14 @@ export const addExcuseLetter = async (studentId, reason, dateSubmitted, attachme
 
 export const getExcuseLetters = async (status = null) => {
   try {
-    const database = await getDB();
-    let result;
+    let q;
     if (status) {
-      result = await database.getAllAsync(
-        `SELECT e.*, s.name, s.email FROM excuseletters e JOIN students s ON e.studentId = s.id WHERE e.status = ? ORDER BY e.createdAt DESC`,
-        [status]
-      );
+      q = query(collection(db, "excuseletters"), where("status", "==", status));
     } else {
-      result = await database.getAllAsync(
-        `SELECT e.*, s.name, s.email FROM excuseletters e JOIN students s ON e.studentId = s.id ORDER BY e.createdAt DESC`
-      );
+      q = query(collection(db, "excuseletters"));
     }
-    return result || [];
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
     console.error("Get excuse letters error:", error);
     throw error;
@@ -374,12 +267,8 @@ export const getExcuseLetters = async (status = null) => {
 
 export const updateExcuseLetterStatus = async (id, status) => {
   try {
-    const database = await getDB();
-    const result = await database.runAsync(
-      `UPDATE excuseletters SET status = ? WHERE id = ?`,
-      [status, id]
-    );
-    return result;
+    await updateDoc(doc(db, "excuseletters", id), { status, updatedAt: Timestamp.now() });
+    return { id, status };
   } catch (error) {
     console.error("Update excuse letter status error:", error);
     throw error;
@@ -389,12 +278,10 @@ export const updateExcuseLetterStatus = async (id, status) => {
 // ==================== REPORT OPERATIONS ====================
 export const addReport = async (teacherId, title, description, type) => {
   try {
-    const database = await getDB();
-    const result = await database.runAsync(
-      `INSERT INTO reports (teacherId, title, description, type) VALUES (?, ?, ?, ?)`,
-      [teacherId, title, description, type]
-    );
-    return result;
+    const docRef = await addDoc(collection(db, "reports"), {
+      teacherId, title, description, type, generatedAt: Timestamp.now()
+    });
+    return { id: docRef.id, teacherId, title, description, type };
   } catch (error) {
     console.error("Add report error:", error);
     throw error;
@@ -403,12 +290,9 @@ export const addReport = async (teacherId, title, description, type) => {
 
 export const getReportsByTeacher = async (teacherId) => {
   try {
-    const database = await getDB();
-    const result = await database.getAllAsync(
-      `SELECT * FROM reports WHERE teacherId = ? ORDER BY generatedAt DESC`,
-      [teacherId]
-    );
-    return result || [];
+    const q = query(collection(db, "reports"), where("teacherId", "==", teacherId));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
     console.error("Get reports by teacher error:", error);
     throw error;
@@ -418,12 +302,15 @@ export const getReportsByTeacher = async (teacherId) => {
 // ==================== SEARCH & FILTER ====================
 export const searchStudents = async (searchTerm) => {
   try {
-    const database = await getDB();
-    const result = await database.getAllAsync(
-      `SELECT * FROM students WHERE name LIKE ? OR email LIKE ? OR block LIKE ?`,
-      [`%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%`]
-    );
-    return result || [];
+    const q = query(collection(db, "students"));
+    const snapshot = await getDocs(q);
+    const results = snapshot.docs.filter(doc => {
+      const data = doc.data();
+      return data.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+             data.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+             data.block.toLowerCase().includes(searchTerm.toLowerCase());
+    });
+    return results.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
     console.error("Search students error:", error);
     throw error;
@@ -432,14 +319,17 @@ export const searchStudents = async (searchTerm) => {
 
 export const getAttendanceStats = async (studentId, startDate, endDate) => {
   try {
-    const database = await getDB();
-    const result = await database.getAllAsync(
-      `SELECT status, COUNT(*) as count FROM attendance 
-       WHERE studentId = ? AND date BETWEEN ? AND ? 
-       GROUP BY status`,
-      [studentId, startDate, endDate]
-    );
-    return result || [];
+    const q = query(collection(db, "attendance"), where("studentId", "==", studentId));
+    const snapshot = await getDocs(q);
+    const records = snapshot.docs.map(doc => doc.data());
+
+    const stats = {};
+    records.forEach(record => {
+      if (record.date >= startDate && record.date <= endDate) {
+        stats[record.status] = (stats[record.status] || 0) + 1;
+      }
+    });
+    return stats;
   } catch (error) {
     console.error("Get attendance stats error:", error);
     throw error;
