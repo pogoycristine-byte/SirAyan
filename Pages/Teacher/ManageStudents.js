@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -16,9 +16,23 @@ import {
 } from "react-native";
 import Modal from "react-native-modal";
 import * as DocumentPicker from "expo-document-picker";
-import * as Linking from "expo-linking";
-import { Ionicons } from "@expo/vector-icons"; 
+import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+// Firestore
+import {
+  collection,
+  doc,
+  onSnapshot,
+  setDoc,
+  deleteDoc,
+  getDoc,
+  query,
+  where,
+  getDocs,
+} from "firebase/firestore";
+import { db } from "../../src/config/firebase";
+import * as Linking from "expo-linking";
 
 export default function ManageStudents({ route, navigation }) {
   const insets = useSafeAreaInsets();
@@ -29,7 +43,6 @@ export default function ManageStudents({ route, navigation }) {
   const [studentName, setStudentName] = useState("");
   const [year, setYear] = useState("");
   const [block, setBlock] = useState("");
-  const [gender, setGender] = useState("");
   const [email, setEmail] = useState("");
 
   // Modal state
@@ -40,66 +53,164 @@ export default function ManageStudents({ route, navigation }) {
   // View Student Modal
   const [viewModalVisible, setViewModalVisible] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
+  const [studentExcuses, setStudentExcuses] = useState([]);
 
   // Search
   const [searchQuery, setSearchQuery] = useState("");
 
+  // ---------------- load students from Firestore ----------------
+  useEffect(() => {
+    if (!classInfo?.id) return;
+    const studentsCol = collection(db, "sessions", classInfo.id, "students");
+    const unsub = onSnapshot(
+      studentsCol,
+      (snap) => {
+        const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        arr.sort((a, b) => {
+          const ta = a.joinedAt ? a.joinedAt.toMillis?.() || 0 : 0;
+          const tb = b.joinedAt ? b.joinedAt.toMillis?.() || 0 : 0;
+          return tb - ta;
+        });
+        setStudents(arr);
+      },
+      (err) => {
+        console.error("students onSnapshot error:", err);
+      }
+    );
+    return () => unsub();
+  }, [classInfo?.id]);
+
+  // ---------------- add student (confirm) ----------------
   const addStudent = () => {
-    if (!studentName || !year || !block || !gender || !email) {
+    if (!studentName || !year || !block || !email) {
       Alert.alert("Validation", "Please fill in all fields");
       return;
     }
-
     const newStudent = {
       id: Date.now().toString(),
       name: studentName,
       year,
       block,
-      gender,
       email,
       file: null,
     };
-
     setTempStudent(newStudent);
     setIsConfirm(true);
   };
 
-  const confirmAddStudent = () => {
-    if (tempStudent) {
-      setStudents((prev) => [...prev, tempStudent]);
-    }
+  const confirmAddStudent = async () => {
+    if (!tempStudent) return;
+    try {
+      const studentRef = doc(db, "sessions", classInfo.id, "students", tempStudent.id);
+      await setDoc(studentRef, {
+        uid: tempStudent.id,
+        fullname: tempStudent.name,
+        year: tempStudent.year,
+        block: tempStudent.block,
+        email: tempStudent.email,
+        file: null,
+        joinedAt: new Date().toISOString(),
+      });
 
-    // Reset form and auto close modal
-    setStudentName("");
-    setYear("");
-    setBlock("");
-    setGender("");
-    setEmail("");
-    setTempStudent(null);
-    setIsConfirm(false);
-    setModalVisible(false);
+      setStudentName("");
+      setYear("");
+      setBlock("");
+      setEmail("");
+      setTempStudent(null);
+      setIsConfirm(false);
+      setModalVisible(false);
+      Alert.alert("Success", "Student added");
+    } catch (err) {
+      console.error("confirmAddStudent error:", err);
+      Alert.alert("Error", "Failed to add student");
+    }
   };
 
   const cancelAddStudent = () => {
     setIsConfirm(false);
   };
 
+  // ---------------- delete student from Firestore ----------------
   const deleteStudent = (id) => {
     Alert.alert("Delete Student", "Are you sure you want to delete this student?", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Delete",
         style: "destructive",
-        onPress: () => setStudents((prev) => prev.filter((s) => s.id !== id)),
+        onPress: async () => {
+          try {
+            await deleteDoc(doc(db, "sessions", classInfo.id, "students", id));
+            Alert.alert("Deleted", "Student removed");
+          } catch (err) {
+            console.error("deleteStudent error:", err);
+            Alert.alert("Error", "Failed to delete student");
+          }
+        },
       },
     ]);
   };
 
-  const viewStudent = (student) => {
-    setSelectedStudent(student);
-    setViewModalVisible(true);
+  // ---------------- view student ----------------
+  const viewStudent = async (student) => {
+    try {
+      let enriched = { ...student };
+      let uid = student.uid || student.id || student.studentUid || student.userId || null;
+
+      if (!uid && (student.email || student.username || student.fullname)) {
+        const usersCol = collection(db, "users");
+        let q;
+        if (student.email) q = query(usersCol, where("email", "==", student.email));
+        else if (student.username) q = query(usersCol, where("username", "==", student.username));
+        else q = query(usersCol, where("fullname", "==", student.fullname));
+        const snaps = await getDocs(q);
+        if (!snaps.empty) {
+          const udoc = snaps.docs[0];
+          uid = udoc.id;
+          enriched = { ...udoc.data(), ...enriched, uid };
+        }
+      }
+
+      if (uid) {
+        const userRef = doc(db, "users", String(uid));
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const ud = userSnap.data();
+          enriched = {
+            ...enriched,
+            fullname: enriched.fullname || ud.fullname || ud.name || "",
+            "student-id": enriched["student-id"] || ud["student-id"] || ud.studentId || "",
+            year: enriched.year || ud.year || "",
+            section: enriched.section || ud.section || ud.block || "",
+            email: enriched.email || ud.email || "",
+            uid: String(uid),
+          };
+        }
+      }
+
+      // Fetch excuses for this student
+      const excusesCol = collection(db, "excuses");
+      const excuseQuery = query(excusesCol, where("studentUid", "==", String(uid)));
+      const excuseSnap = await getDocs(excuseQuery);
+      const excuses = excuseSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setStudentExcuses(excuses);
+
+      setSelectedStudent(enriched);
+      setViewModalVisible(true);
+    } catch (err) {
+      console.error("viewStudent error:", err);
+      setSelectedStudent(student);
+      setViewModalVisible(true);
+    }
   };
 
+  const openExcuseFile = (fileUri) => {
+    if (!fileUri) return;
+    Linking.openURL(fileUri).catch(() => {
+      Alert.alert("Error", "Cannot open this file.");
+    });
+  };
+
+  // ---------------- attach file ----------------
   const attachFile = async (studentId) => {
     try {
       const res = await DocumentPicker.getDocumentAsync({
@@ -113,13 +224,20 @@ export default function ManageStudents({ route, navigation }) {
 
       if (res.type === "success") {
         const file = { name: res.name, uri: res.uri, type: res.mimeType || "document" };
-        setStudents((prev) =>
-          prev.map((s) => (s.id === studentId ? { ...s, file } : s))
+        const studentRef = doc(db, "sessions", classInfo.id, "students", studentId);
+        await setDoc(
+          studentRef,
+          {
+            file,
+            fileAttachedAt: new Date().toISOString(),
+          },
+          { merge: true }
         );
-        Alert.alert("File Attached", `File attached for ${studentName || "student"}`);
+
+        Alert.alert("File Attached", `File attached for student`);
       }
     } catch (err) {
-      console.error(err);
+      console.error("attachFile error:", err);
       Alert.alert("Error", "Failed to pick file");
     }
   };
@@ -133,8 +251,8 @@ export default function ManageStudents({ route, navigation }) {
 
   const filteredStudents = students.filter(
     (s) =>
-      s.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.id?.toLowerCase().includes(searchQuery.toLowerCase())
+      s.fullname?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.uid?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -145,7 +263,7 @@ export default function ManageStudents({ route, navigation }) {
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <ScrollView contentContainerStyle={{ padding: 20, paddingTop: 15 + insets.top }}>
-
+            
             {/* Search Bar */}
             <View style={styles.manageSearchContainer}>
               <Ionicons name="search" size={20} color="#2563EB" />
@@ -157,7 +275,7 @@ export default function ManageStudents({ route, navigation }) {
               />
             </View>
 
-            {/* Header Row */}
+            {/* Header */}
             <View style={styles.manageHeaderRow}>
               <View style={{ flexDirection: "row", alignItems: "center" }}>
                 <Ionicons name="list" size={22} color="#1E3A8A" style={{ marginRight: 8 }} />
@@ -184,7 +302,6 @@ export default function ManageStudents({ route, navigation }) {
                     <TextInput style={styles.manageInput} placeholder="Name" placeholderTextColor="#777" value={studentName} onChangeText={setStudentName} />
                     <TextInput style={styles.manageInput} placeholder="Year" placeholderTextColor="#777" value={year} onChangeText={setYear} />
                     <TextInput style={styles.manageInput} placeholder="Block" placeholderTextColor="#777" value={block} onChangeText={setBlock} />
-                    <TextInput style={styles.manageInput} placeholder="Gender" placeholderTextColor="#777" value={gender} onChangeText={setGender} />
                     <TextInput style={styles.manageInput} placeholder="Email" placeholderTextColor="#777" value={email} onChangeText={setEmail} />
                     <TouchableOpacity style={styles.manageModalAddButton} onPress={addStudent}>
                       <Text style={styles.manageAddButtonText}>Add Student</Text>
@@ -196,7 +313,6 @@ export default function ManageStudents({ route, navigation }) {
                     <Text style={styles.manageDetailText}>Name: {tempStudent.name}</Text>
                     <Text style={styles.manageDetailText}>Year: {tempStudent.year}</Text>
                     <Text style={styles.manageDetailText}>Block: {tempStudent.block}</Text>
-                    <Text style={styles.manageDetailText}>Gender: {tempStudent.gender}</Text>
                     <Text style={styles.manageDetailText}>Email: {tempStudent.email}</Text>
                     <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 20 }}>
                       <TouchableOpacity style={[styles.manageModalAddButton, { flex: 1, marginRight: 10 }]} onPress={cancelAddStudent}>
@@ -219,16 +335,38 @@ export default function ManageStudents({ route, navigation }) {
             >
               {selectedStudent && (
                 <View style={styles.manageModalContent}>
-                  <Text style={styles.manageModalTitle}>{selectedStudent.name}</Text>
-                  <Text style={styles.manageDetailText}>Year: {selectedStudent.year}</Text>
-                  <Text style={styles.manageDetailText}>Block: {selectedStudent.block}</Text>
-                  <Text style={styles.manageDetailText}>Gender: {selectedStudent.gender}</Text>
-                  <Text style={styles.manageDetailText}>Email: {selectedStudent.email}</Text>
-                  {selectedStudent.file && (
-                    <TouchableOpacity style={[styles.manageModalAddButton, { backgroundColor: "#10B981" }]} onPress={() => viewFile(selectedStudent.file)}>
-                      <Text style={styles.manageAddButtonText}>View Attached File</Text>
-                    </TouchableOpacity>
+                  <Text style={styles.manageModalTitle}>{selectedStudent.fullname || selectedStudent.name}</Text>
+
+                  <Text style={styles.manageDetailText}>Student ID: {selectedStudent["student-id"] || selectedStudent.uid || selectedStudent.id}</Text>
+                  <Text style={styles.manageDetailText}>Year: {selectedStudent.year || ""}</Text>
+                  <Text style={styles.manageDetailText}>Email: {selectedStudent.email || ""}</Text>
+
+                  {/* Excuses Section */}
+                  {studentExcuses.length > 0 && (
+                    <View style={{ marginTop: 15, borderTopWidth: 1, borderTopColor: "#E2E8F0", paddingTop: 10 }}>
+                      <Text style={{ fontWeight: "700", color: "#1E3A8A", marginBottom: 8 }}>Excuse Letters:</Text>
+                      {studentExcuses.map((excuse) => (
+                        <View key={excuse.id} style={{ backgroundColor: "#F8FAFC", padding: 10, borderRadius: 8, marginBottom: 8, borderLeftWidth: 4, borderLeftColor: excuse.status === "Approved" ? "#10B981" : "#F59E0B" }}>
+                          <Text style={{ fontWeight: "600", color: "#333", marginBottom: 4 }}>
+                            {excuse.fileName || "Excuse Letter"}
+                          </Text>
+                          <Text style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>
+                            Submitted: {excuse.submittedAt ? new Date(excuse.submittedAt.toDate()).toLocaleDateString() : "Unknown"}
+                          </Text>
+                          <Text style={{ fontSize: 12, color: "#666", marginBottom: 8 }}>
+                            Status: <Text style={{ fontWeight: "700", color: excuse.status === "Approved" ? "#10B981" : "#F59E0B" }}>{excuse.status || "Pending"}</Text>
+                          </Text>
+                          <TouchableOpacity
+                            style={{ backgroundColor: "#2563EB", padding: 8, borderRadius: 6 }}
+                            onPress={() => openExcuseFile(excuse.fileUrl)}
+                          >
+                            <Text style={{ color: "#fff", fontWeight: "600", textAlign: "center", fontSize: 12 }}>View File</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ))}
+                    </View>
                   )}
+
                   <TouchableOpacity style={[styles.manageModalAddButton, { marginTop: 15 }]} onPress={() => setViewModalVisible(false)}>
                     <Text style={styles.manageAddButtonText}>Close</Text>
                   </TouchableOpacity>
@@ -239,18 +377,18 @@ export default function ManageStudents({ route, navigation }) {
             {/* Students List */}
             <FlatList
               data={filteredStudents}
-              keyExtractor={(item) => item.id}
+              keyExtractor={(item) => item.uid || item.id}
               renderItem={({ item }) => (
                 <View style={styles.manageStudentCardRow}>
-                  <Text style={styles.manageStudentName}>{item.name}</Text>
+                  <Text style={styles.manageStudentName}>{item.fullname || item.name}</Text>
                   <View style={styles.manageStudentActions}>
                     <TouchableOpacity onPress={() => viewStudent(item)} style={styles.manageActionBtn}>
                       <Ionicons name="eye" size={20} color="#2563EB" />
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => deleteStudent(item.id)} style={styles.manageActionBtn}>
+                    <TouchableOpacity onPress={() => deleteStudent(item.uid || item.id)} style={styles.manageActionBtn}>
                       <Ionicons name="trash" size={20} color="#EF4444" />
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => attachFile(item.id)} style={styles.manageActionBtn}>
+                    <TouchableOpacity onPress={() => attachFile(item.uid || item.id)} style={styles.manageActionBtn}>
                       <Ionicons name="document-text-outline" size={20} color={item.file ? "#10B981" : "#6B7280"} />
                     </TouchableOpacity>
                   </View>

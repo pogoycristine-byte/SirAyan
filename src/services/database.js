@@ -15,7 +15,8 @@ import {
   updateDoc,
   Timestamp,
   setDoc,
-  deleteDoc
+  deleteDoc,
+  arrayUnion
 } from "firebase/firestore";
 import { auth, db } from "../config/firebase";
 
@@ -335,3 +336,35 @@ export const getAttendanceStats = async (studentId, startDate, endDate) => {
     throw error;
   }
 };
+
+export async function addStudentClass(studentId, sessionId) {
+  try {
+    // create a student doc under sessions/{sessionId}/students/{studentId}
+    const studentRef = doc(db, "sessions", sessionId, "students", String(studentId));
+    const existing = await getDoc(studentRef);
+    if (existing.exists()) return { id: existing.id, ...existing.data(), alreadyJoined: true };
+
+    await setDoc(studentRef, {
+      uid: String(studentId),
+      joinedAt: new Date().toISOString(),
+    });
+
+    // also add sessionId to user.joinedSessions array (create user doc if needed)
+    const userRef = doc(db, "users", String(studentId));
+    const userSnap = await getDoc(userRef);
+    if (userSnap.exists()) {
+      await updateDoc(userRef, { joinedSessions: arrayUnion(sessionId) });
+    } else {
+      await setDoc(userRef, {
+        uid: String(studentId),
+        joinedSessions: [sessionId],
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    return { id: studentId, sessionId };
+  } catch (err) {
+    console.error("addStudentClass error:", err);
+    throw err;
+  }
+}

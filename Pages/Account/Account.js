@@ -44,7 +44,7 @@ export default function Account({ navigation }) {
     loadRememberedUser();
   }, []);
 
-  // ✔ FIXED LOGIN FUNCTION
+  // ✔ UPDATED LOGIN FUNCTION
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
       Alert.alert("Error", "Please enter both email and password.");
@@ -57,6 +57,9 @@ export default function Account({ navigation }) {
       // 1. LOGIN WITH FIREBASE AUTH
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const firebaseUser = userCredential.user;
+
+      // 🔥 STORE UID FOR LATER (so student stays connected to class)
+      await AsyncStorage.setItem("currentUserId", firebaseUser.uid);
 
       // 2. GET FIRESTORE USER USING UID
       const userRef = doc(db, "users", firebaseUser.uid);
@@ -137,7 +140,11 @@ export default function Account({ navigation }) {
               editable={!loading}
             />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)} disabled={loading}>
-              <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={22} color="#555" />
+              <Ionicons
+                name={showPassword ? "eye-off-outline" : "eye-outline"}
+                size={22}
+                color="#555"
+              />
             </TouchableOpacity>
           </View>
 

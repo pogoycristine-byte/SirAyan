@@ -23,7 +23,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { CameraView, useCameraPermissions } from "expo-camera";
 
 // Firebase imports
-import { collection, addDoc, query, where, getDocs, Timestamp, deleteDoc, doc } from "firebase/firestore";
+import { collection, addDoc, query, where, getDocs, Timestamp, deleteDoc, doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../src/config/firebase";
 
 // local screens
@@ -297,15 +297,55 @@ function DashboardMain() {
     setScanned(true);
     setLoading(true);
     try {
+      // try parse student QR (student -> teacher scan)
+      let payload = null;
+      try { payload = JSON.parse(data); } catch (e) { payload = null; }
+
+      if (payload && payload.studentId && payload.classId) {
+        const studentId = String(payload.studentId);
+        const sessionId = String(payload.classId);
+        const studentName = payload.studentName || payload.studentName || "Student";
+
+        // date string matching student dashboard format
+        const date = new Date().toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
+        const attendanceId = `${studentId}_${date.replace(/\s+/g, "_")}`;
+
+        const attRef = doc(db, "sessions", sessionId, "attendance", attendanceId);
+        const attSnap = await getDoc(attRef);
+        if (attSnap.exists()) {
+          Alert.alert("Info", `${studentName} already marked for ${date}.`);
+        } else {
+          await setDoc(attRef, {
+            studentUid: studentId,
+            studentName,
+            classId: sessionId,
+            status: "Present",
+            date,
+            markedBy: teacher.id || null,
+            createdAt: serverTimestamp(),
+          });
+          Alert.alert("Success", `${studentName} marked Present for ${date}.`);
+        }
+
+        setCameraVisible(false);
+        return;
+      }
+
+      // fallback: treat scanned data as teacher-generated QR code string
       const qrCode = await getQRCodeByCode(data);
       if (qrCode) {
-        Alert.alert("Success", `QR Code scanned for class: ${qrCode.classId}`);
+        Alert.alert("Success", `QR Code scanned for class: ${qrCode.classId || qrCode.code}`);
         setCameraVisible(false);
-      } else {
-        Alert.alert("Invalid QR Code", "This QR code is not recognized.");
+        return;
       }
+
+      Alert.alert("Invalid QR Code", "This QR code is not recognized.");
     } catch (error) {
-      Alert.alert("Error", "Failed to scan QR code: " + error.message);
+      Alert.alert("Error", "Failed to process QR code: " + (error.message || error));
       console.error("QR Scan error:", error);
     } finally {
       setLoading(false);

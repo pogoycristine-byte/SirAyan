@@ -30,6 +30,9 @@ export default function Register({ navigation }) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [role, setRole] = useState("student");
   const [section, setSection] = useState("");
+  // student-only fields
+  const [studentId, setStudentId] = useState("");
+  const [year, setYear] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -57,6 +60,10 @@ export default function Register({ navigation }) {
         username: email,
         role,
         section: role === "teacher" ? section : "",
+        // include student-only fields when role is student
+        ...(role === "student"
+          ? { "student-id": studentId || "", year: year || "" }
+          : {}),
         createdAt: new Date().toISOString(),
       };
 
@@ -198,6 +205,37 @@ export default function Register({ navigation }) {
               placeholderTextColor="#a0a0a0"
             />
           </View>
+
+          {/* Student-only inputs */}
+          {role === "student" && (
+            <>
+              <View style={styles.inputContainer}>
+                <Ionicons name="id-card-outline" size={22} color="#2D4EFF" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Student ID"
+                  value={studentId}
+                  onChangeText={setStudentId}
+                  editable={!loading}
+                  placeholderTextColor="#a0a0a0"
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Ionicons name="school-outline" size={22} color="#2D4EFF" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Year (e.g., 1 or 1A)"
+                  value={year}
+                  onChangeText={setYear}
+                  editable={!loading}
+                  keyboardType="default"        // <-- allow letters + numbers
+                  autoCapitalize="characters"   // optional: uppercase letters
+                  placeholderTextColor="#a0a0a0"
+                />
+              </View>
+            </>
+          )}
 
           {/* Register Button */}
           <TouchableOpacity
