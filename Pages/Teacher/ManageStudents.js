@@ -129,7 +129,7 @@ export default function ManageStudents({ route, navigation }) {
     setIsConfirm(false);
   };
 
-  // ---------------- delete student from Firestore ----------------
+  // ---------------- delete student ----------------
   const deleteStudent = (id) => {
     Alert.alert("Delete Student", "Are you sure you want to delete this student?", [
       { text: "Cancel", style: "cancel" },
@@ -149,7 +149,7 @@ export default function ManageStudents({ route, navigation }) {
     ]);
   };
 
-  // ---------------- view student (FIXED SECTION/BLOCK HERE) ----------------
+  // ---------------- view student ----------------
   const viewStudent = async (student) => {
     try {
       let enriched = { ...student };
@@ -181,10 +181,8 @@ export default function ManageStudents({ route, navigation }) {
             "student-id": enriched["student-id"] || ud["student-id"] || ud.studentId || "",
             year: enriched.year || ud.year || "",
 
-            // ---------------- FIXED SECTION/BLOCK ----------------
             section: ud.section || enriched.section || "",
             block: ud.block || enriched.block || "",
-            // -----------------------------------------------------
 
             email: enriched.email || ud.email || "",
             uid: String(uid),
@@ -254,6 +252,7 @@ export default function ManageStudents({ route, navigation }) {
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <ScrollView contentContainerStyle={{ padding: 20, paddingTop: 15 + insets.top }}>
+
             {/* Search Bar */}
             <View style={styles.manageSearchContainer}>
               <Ionicons name="search" size={20} color="#2563EB" />
@@ -328,7 +327,9 @@ export default function ManageStudents({ route, navigation }) {
                   <Text style={styles.manageModalTitle}>{selectedStudent.fullname || selectedStudent.name}</Text>
 
                   <Text style={styles.manageDetailText}>Student ID: {selectedStudent["student-id"] || selectedStudent.uid || selectedStudent.id}</Text>
-                  <Text style={styles.manageDetailText}>Year: {selectedStudent.year || ""}</Text>
+
+                  {/* ❌ YEAR REMOVED FROM HERE  */}
+
                   <Text style={styles.manageDetailText}>Section / Block: {selectedStudent.section || selectedStudent.block || ""}</Text>
                   <Text style={styles.manageDetailText}>Email: {selectedStudent.email || ""}</Text>
 

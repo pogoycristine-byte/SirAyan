@@ -159,7 +159,9 @@ export default function AttachLetter() {
               <View style={styles.cardRow}>
                 <View>
                   <Text style={styles.className}>{c.name}</Text>
-                  <Text style={styles.classSection}>{c.section}</Text>
+                  <Text style={styles.classSection}>
+                    {c.section && c.section !== "N/A" ? `Block ${c.section}` : c.section}
+                  </Text>
                   <Text style={styles.sessionCount}>
                     {c.sessions.length} attendance record
                     {c.sessions.length !== 1 ? "s" : ""}

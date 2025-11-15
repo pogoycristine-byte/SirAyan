@@ -58,10 +58,10 @@ export default function Account({ navigation }) {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const firebaseUser = userCredential.user;
 
-      // 🔥 STORE UID FOR LATER (so student stays connected to class)
+      // 🔥 STORE UID
       await AsyncStorage.setItem("currentUserId", firebaseUser.uid);
 
-      // 2. GET FIRESTORE USER USING UID
+      // 2. GET FIRESTORE USER
       const userRef = doc(db, "users", firebaseUser.uid);
       const userSnap = await getDoc(userRef);
 
@@ -71,7 +71,6 @@ export default function Account({ navigation }) {
       }
 
       const userProfile = userSnap.data();
-      console.log("User profile:", userProfile);
 
       // 3. REMEMBER ME
       if (rememberMe) {
@@ -82,7 +81,7 @@ export default function Account({ navigation }) {
 
       await AsyncStorage.setItem("currentUser", JSON.stringify(userProfile));
 
-      // 4. NAVIGATION BASED ON ROLE
+      // 4. NAVIGATE BY ROLE
       if (userProfile.role === "teacher") {
         navigation.replace("TeacherDashboard", { user: userProfile });
       } else if (userProfile.role === "student") {
@@ -101,23 +100,26 @@ export default function Account({ navigation }) {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: "#F5F8FF" }}
+      style={{ flex: 1, backgroundColor: "#E8F0FF" }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0}
     >
       <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
         <View style={styles.container}>
+
+          {/* 🔵 Logo + Attendify */}
           <View style={styles.logoContainer}>
-            <MaterialIcons name="assignment" size={60} color="#2D4EFF" />
+            <MaterialIcons name="fact-check" size={64} color="#1E3A8A" />
             <Text style={styles.appTitle}>Attendify</Text>
           </View>
 
+          {/* Email Input */}
           <View style={styles.inputContainer}>
-            <Ionicons name="mail-outline" size={22} color="#2D4EFF" style={styles.inputIcon} />
+            <Ionicons name="mail" size={22} color="#1E40AF" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
               placeholder="Email"
-              placeholderTextColor="#a0a0a0"
+              placeholderTextColor="#A3B1D9"
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
@@ -126,12 +128,13 @@ export default function Account({ navigation }) {
             />
           </View>
 
+          {/* Password Input */}
           <View style={styles.inputContainer}>
-            <Ionicons name="lock-closed-outline" size={22} color="#2D4EFF" style={styles.inputIcon} />
+            <Ionicons name="lock-closed" size={22} color="#1E40AF" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
               placeholder="Password"
-              placeholderTextColor="#a0a0a0"
+              placeholderTextColor="#A3B1D9"
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
@@ -139,42 +142,54 @@ export default function Account({ navigation }) {
               autoCorrect={false}
               editable={!loading}
             />
+
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)} disabled={loading}>
               <Ionicons
-                name={showPassword ? "eye-off-outline" : "eye-outline"}
+                name={showPassword ? "eye-off" : "eye"}
                 size={22}
-                color="#555"
+                color="#475569"
               />
             </TouchableOpacity>
           </View>
 
+          {/* Remember Me */}
           <TouchableOpacity
             style={styles.rememberMeContainer}
             onPress={() => setRememberMe(!rememberMe)}
             disabled={loading}
           >
             <Ionicons
-              name={rememberMe ? "checkbox-outline" : "square-outline"}
+              name={rememberMe ? "checkbox" : "square-outline"}
               size={22}
-              color="#2D4EFF"
+              color="#1E40AF"
             />
             <Text style={styles.rememberMeText}>Remember Me</Text>
           </TouchableOpacity>
 
+          {/* Login Button */}
           <TouchableOpacity
-            style={[styles.loginButton, { opacity: email && password && !loading ? 1 : 0.6 }]}
+            style={[
+              styles.loginButton,
+              { opacity: email && password && !loading ? 1 : 0.6 },
+            ]}
             onPress={handleLogin}
             disabled={!email || !password || loading}
           >
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.loginText}>Login</Text>}
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.loginText}>Login</Text>
+            )}
           </TouchableOpacity>
 
+          {/* Register Link */}
           <View style={styles.registerContainer}>
             <Text style={styles.registerText}>Don't have an account? </Text>
             <TouchableOpacity onPress={() => navigation.navigate("Register")} disabled={loading}>
               <Text style={styles.registerLink}>Register here</Text>
             </TouchableOpacity>
           </View>
+
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -191,6 +206,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 20,
   },
+
+  /* 🔵 Logo Section */
   logoContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -199,20 +216,23 @@ const styles = StyleSheet.create({
   },
   appTitle: {
     fontSize: 42,
-    fontWeight: "800",
-    color: "#2D4EFF",
-    letterSpacing: 1,
+    fontWeight: "900",
+    color: "#1E3A8A",
+    letterSpacing: 1.5,
   },
+
+  /* 🔵 Inputs */
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
     width: "80%",
-    height: 50,
-    backgroundColor: "#fff",
-    marginBottom: 20,
+    height: 54,
+    backgroundColor: "#FFFFFF",
+    marginBottom: 18,
     paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#D0D7FF",
+    borderWidth: 1,
+    borderColor: "#93C5FD",
+    borderRadius: 8,
   },
   inputIcon: {
     marginRight: 8,
@@ -220,9 +240,11 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    color: "#333",
+    color: "#1E293B",
     paddingVertical: 8,
   },
+
+  /* 🔵 Remember Me */
   rememberMeContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -233,31 +255,35 @@ const styles = StyleSheet.create({
   },
   rememberMeText: {
     fontSize: 15,
-    color: "#555",
+    color: "#334155",
   },
+
+  /* 🔵 Login Button */
   loginButton: {
-    backgroundColor: "#2D4EFF",
+    backgroundColor: "#1E3A8A",
     paddingVertical: 14,
     width: "80%",
     alignItems: "center",
-    borderRadius: 6,
+    borderRadius: 8,
   },
   loginText: {
     color: "#fff",
     fontSize: 18,
-    fontWeight: "600",
+    fontWeight: "700",
   },
+
+  /* 🔵 Register Link */
   registerContainer: {
     flexDirection: "row",
     marginTop: 25,
   },
   registerText: {
     fontSize: 15,
-    color: "#555",
+    color: "#475569",
   },
   registerLink: {
     fontSize: 15,
-    color: "#2D4EFF",
-    fontWeight: "600",
+    color: "#1E40AF",
+    fontWeight: "700",
   },
 });

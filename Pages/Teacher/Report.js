@@ -63,6 +63,8 @@ export default function Report() {
             const sData = sDoc.data();
             const sessionId = sDoc.id;
             const sessionName = sData.subject || sData.title || "Untitled";
+            // capture session block/section (will be shown as "Block X")
+            const sessionBlock = sData.block || sData.section || "";
 
             const attCol = collection(db, "sessions", sessionId, "attendance");
             const studentsCol = collection(db, "sessions", sessionId, "students");
@@ -91,6 +93,7 @@ export default function Report() {
                       id: defaultKey,
                       sessionId,
                       sessionName,
+                      block: sessionBlock,
                       date: todayIso,
                       students: allStudents.map((s) => ({
                         studentUid: s.studentUid,
@@ -129,6 +132,7 @@ export default function Report() {
                       id: key,
                       sessionId,
                       sessionName,
+                      block: sessionBlock,
                       date,
                       students: [],
                       present: 0,
@@ -215,6 +219,7 @@ export default function Report() {
     <TouchableOpacity style={styles.card} onPress={() => openModal(item)}>
       <View style={{ flex: 1 }}>
         <Text style={styles.title}>{item.sessionName}</Text>
+        {item.block ? <Text style={styles.blockText}>{`Block ${item.block}`}</Text> : null}
         <Text style={styles.sub}>{item.date}</Text>
         <Text style={styles.small}>{item.total} total • {item.present} present • {item.absent} absent</Text>
       </View>
@@ -251,6 +256,7 @@ export default function Report() {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{selected?.sessionName}</Text>
               <Text style={styles.modalDate}>{selected?.date}</Text>
+              {selected?.block ? <Text style={styles.modalBlock}>{`Block ${selected.block}`}</Text> : null}
             </View>
 
             <View style={styles.modalBody}>
@@ -306,6 +312,7 @@ const styles = StyleSheet.create({
     borderColor: "#EEF2FF",
   },
   title: { fontSize: 16, fontWeight: "700", color: "#0F172A" },
+  blockText: { fontSize: 13, color: "#044f85ff", marginTop: 4 },   // added for list cards
   sub: { fontSize: 13, color: "#6B7280", marginTop: 4 },
   small: { fontSize: 12, color: "#475569", marginTop: 6 },
   empty: { alignItems: "center", marginTop: 40 },
@@ -324,6 +331,7 @@ const styles = StyleSheet.create({
   modalHeader: { marginBottom: 8 },
   modalTitle: { fontSize: 18, fontWeight: "800", color: "#1E293B" },
   modalDate: { fontSize: 13, color: "#6B7280", marginTop: 4 },
+  modalBlock: { fontSize: 13, color: "#6B7280", marginTop: 6 }, // added for modal header
   modalBody: { marginTop: 8, marginBottom: 12 },
   modalSummary: { fontSize: 13, color: "#475569", marginBottom: 8 },
   studentRow: {

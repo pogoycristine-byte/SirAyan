@@ -20,7 +20,7 @@ import { auth } from "../../src/config/firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 
 // Firestore functions
-import { addUser, getUserByUsername } from "../../src/services/database";
+import { addUser } from "../../src/services/database";
 
 export default function Register({ navigation }) {
   const [fullName, setFullName] = useState("");
@@ -30,7 +30,6 @@ export default function Register({ navigation }) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [role, setRole] = useState("student");
   const [section, setSection] = useState("");
-  // student-only fields
   const [studentId, setStudentId] = useState("");
   const [year, setYear] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -48,19 +47,16 @@ export default function Register({ navigation }) {
     setLoading(true);
 
     try {
-      // Create Firebase Auth user
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const uid = userCredential.user.uid;
 
-      // Save user data to Firestore
       const userData = {
         uid,
         email,
-        fullname: fullName, // <-- Make sure this matches
+        fullname: fullName,
         username: email,
         role,
         section: role === "teacher" ? section : "",
-        // include student-only fields when role is student
         ...(role === "student"
           ? { "student-id": studentId || "", year: year || "" }
           : {}),
@@ -69,14 +65,12 @@ export default function Register({ navigation }) {
 
       await addUser(uid, userData);
 
-      // Save to AsyncStorage
       await AsyncStorage.setItem("currentUser", JSON.stringify(userData));
 
-      // Navigate with user data
       if (role === "teacher") {
         navigation.replace("TeacherDashboard", { user: userData });
       } else if (role === "student") {
-        navigation.replace("StudentDashboard", { user: userData }); // <-- Pass userData here
+        navigation.replace("StudentDashboard", { user: userData });
       }
 
       Alert.alert("Success", "Account created successfully!");
@@ -175,7 +169,11 @@ export default function Register({ navigation }) {
               placeholderTextColor="#a0a0a0"
             />
             <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} disabled={loading}>
-              <Ionicons name={showConfirmPassword ? "eye-off-outline" : "eye-outline"} size={22} color="#555" />
+              <Ionicons
+                name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
+                size={22}
+                color="#555"
+              />
             </TouchableOpacity>
           </View>
 
@@ -206,7 +204,7 @@ export default function Register({ navigation }) {
             />
           </View>
 
-          {/* Student-only inputs */}
+          {/* Student-only */}
           {role === "student" && (
             <>
               <View style={styles.inputContainer}>
@@ -229,8 +227,8 @@ export default function Register({ navigation }) {
                   value={year}
                   onChangeText={setYear}
                   editable={!loading}
-                  keyboardType="default"        // <-- allow letters + numbers
-                  autoCapitalize="characters"   // optional: uppercase letters
+                  keyboardType="default"
+                  autoCapitalize="characters"
                   placeholderTextColor="#a0a0a0"
                 />
               </View>
@@ -262,43 +260,67 @@ export default function Register({ navigation }) {
 const styles = StyleSheet.create({
   scrollContainer: { flexGrow: 1, justifyContent: "center" },
   container: { justifyContent: "center", alignItems: "center", padding: 20 },
-  logoContainer: { flexDirection: "row", alignItems: "center", marginBottom: 30, gap: 12 },
-  appTitle: { fontSize: 36, fontWeight: "800", color: "#2D4EFF", letterSpacing: 1 },
-  registerTitle: { fontSize: 24, fontWeight: "bold", color: "#1E3A8A", marginBottom: 20 },
+
+  logoContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 30,
+    gap: 12,
+  },
+
+  appTitle: {
+    fontSize: 36,
+    fontWeight: "800",
+    color: "#2D4EFF",
+    letterSpacing: 1,
+  },
+
+  registerTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#1E3A8A",
+    marginBottom: 20,
+  },
+
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
     width: "85%",
     height: 50,
     backgroundColor: "#fff",
-    marginBottom: 15,
+    marginBottom: 0, // ⬅ REMOVE GAPS
     paddingHorizontal: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#D0D7FF",
   },
+
   pickerContainer: {
     flexDirection: "row",
     alignItems: "center",
     width: "85%",
     height: 50,
     backgroundColor: "#fff",
-    marginBottom: 15,
+    marginBottom: 0, // ⬅ REMOVE GAPS
     paddingHorizontal: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#D0D7FF",
   },
+
   inputIcon: { marginRight: 8 },
   input: { flex: 1, fontSize: 16, color: "#333", paddingVertical: 8 },
   picker: { flex: 1, color: "#333" },
+
   registerButton: {
     backgroundColor: "#2D4EFF",
     paddingVertical: 14,
     width: "85%",
     alignItems: "center",
     borderRadius: 6,
-    marginTop: 10,
+    marginTop: 18, // ⬅ KEEP spacing for button
   },
+
   registerText: { color: "#fff", fontSize: 18, fontWeight: "600" },
+
   loginContainer: { flexDirection: "row", marginTop: 20 },
   loginPromptText: { fontSize: 15, color: "#555" },
   loginLink: { fontSize: 15, color: "#2D4EFF", fontWeight: "600" },
