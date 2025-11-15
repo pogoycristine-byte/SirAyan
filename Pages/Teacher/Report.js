@@ -1,275 +1,350 @@
-// Report.js
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
-    View,
-    Text,
-    StyleSheet,
-    TouchableOpacity,
-    ScrollView,
-    LayoutAnimation,
-    Platform,
-    UIManager,
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  Modal,
+  Pressable,
+  ActivityIndicator,
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import DateTimePicker from "@react-native-community/datetimepicker";
-
-// Enable animation on Android
-if (
-    Platform.OS === "android" &&
-    UIManager.setLayoutAnimationEnabledExperimental
-) {
-    UIManager.setLayoutAnimationEnabledExperimental(true);
-}
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { collection, query, where, getDocs, onSnapshot } from "firebase/firestore";
+import { db } from "../../src/config/firebase";
+import { useFocusEffect } from "@react-navigation/native";
 
 export default function Report() {
-    const insets = useSafeAreaInsets();
+  // ALL HOOKS AT TOP LEVEL — UNCONDITIONAL
+  const [loading, setLoading] = useState(true);
+  const [teacher, setTeacher] = useState(null);
+  const [reports, setReports] = useState([]);
+  const [selected, setSelected] = useState(null);
+  const subsRef = useRef([]);
 
-    // HOOKS AT TOP LEVEL — UNCONDITIONAL
-    const [expandedCard, setExpandedCard] = useState(null);
-    const [selectedDate, setSelectedDate] = useState(new Date());
-    const [showDatePicker, setShowDatePicker] = useState(false);
-
-    const formattedDate = selectedDate.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-    });
-
-    const classReports = [
-        {
-            id: 1,
-            title: "Math Class",
-            time: "11:00 AM",
-            total: 18,
-            students: [
-                { name: "John Smith", status: "Present" },
-                { name: "Emily Johnson", status: "Absent" },
-                { name: "Sarah Kim", status: "Late" },
-            ],
-            color: "#E9FDEB",
-        },
-        {
-            id: 2,
-            title: "English Lit",
-            time: "2:00 PM",
-            total: 18,
-            students: [
-                { name: "John Smith", status: "Present" },
-                { name: "Sarah Kim", status: "Absent" },
-            ],
-            color: "#E7F1FF",
-        },
-    ];
-
-    const handleDateChange = (event, date) => {
-        if (Platform.OS === "android") setShowDatePicker(false);
-        if (date) setSelectedDate(date);
+  // Load teacher info
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const saved = await AsyncStorage.getItem("currentUser");
+        if (saved) setTeacher(JSON.parse(saved));
+      } catch (e) {
+        console.error("load teacher error", e);
+      }
     };
+    load();
+  }, []);
 
-    const sortByLastName = (students) => {
-        return [...students].sort((a, b) => {
-            const lastA = a.name.split(" ").pop();
-            const lastB = b.name.split(" ").pop();
-            return lastA.localeCompare(lastB);
-        });
-    };
+  // Subscribe to sessions + attendance (HOOK CALLED UNCONDITIONALLY)
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!teacher?.uid) {
+        setReports([]);
+        setLoading(false);
+        return;
+      }
 
-    const toggleExpand = (id) => {
-        LayoutAnimation.easeInEaseOut();
-        setExpandedCard((prev) => (prev === id ? null : id));
-    };
+      let mounted = true;
+      setLoading(true);
 
-    return (
-        <SafeAreaView
-            style={[
-                styles.container,
-                { paddingTop: insets.top + 25, paddingBottom: insets.bottom + 5 },
-            ]}
-        >
-            {/* HEADER */}
-            <View style={styles.headerRow}>
-                <Text style={styles.headerTitle}>ATTENDANCE REPORTS</Text>
+      (async () => {
+        try {
+          const q = query(collection(db, "sessions"), where("teacherId", "==", teacher.uid));
+          const snap = await getDocs(q);
+          const sessionDocs = snap.docs;
+
+          subsRef.current.forEach((u) => typeof u === "function" && u());
+          subsRef.current = [];
+
+          const reportsMap = {};
+
+          for (const sDoc of sessionDocs) {
+            const sData = sDoc.data();
+            const sessionId = sDoc.id;
+            const sessionName = sData.subject || sData.title || "Untitled";
+
+            const attCol = collection(db, "sessions", sessionId, "attendance");
+            const studentsCol = collection(db, "sessions", sessionId, "students");
+
+            const studentsSnap = await getDocs(studentsCol);
+            const allStudents = studentsSnap.docs.map((sd) => ({
+              studentUid: sd.id,
+              studentName: sd.data()?.fullname || sd.data()?.name || "Unknown",
+            }));
+
+            const unsub = onSnapshot(
+              attCol,
+              (attSnap) => {
+                const datesInThisSession = new Set();
+                attSnap.forEach((docSnap) => {
+                  const d = docSnap.data();
+                  const dateKey = d.date || d.createdAt?.toDate?.()?.toISOString?.().split("T")[0] || new Date().toISOString().split("T")[0];
+                  datesInThisSession.add(dateKey);
+                });
+
+                if (datesInThisSession.size === 0) {
+                  const todayIso = new Date().toISOString().split("T")[0];
+                  const defaultKey = `${sessionId}_${todayIso}`;
+                  if (!reportsMap[defaultKey]) {
+                    reportsMap[defaultKey] = {
+                      id: defaultKey,
+                      sessionId,
+                      sessionName,
+                      date: todayIso,
+                      students: allStudents.map((s) => ({
+                        studentUid: s.studentUid,
+                        studentName: s.studentName,
+                        status: "absent",
+                      })),
+                      present: 0,
+                      absent: allStudents.length,
+                      excused: 0,
+                      total: allStudents.length,
+                    };
+                  }
+                }
+
+                attSnap.forEach((docSnap) => {
+                  const d = docSnap.data();
+
+                  const rawStatus = (d.status || "").toString().trim();
+                  const lower = rawStatus.toLowerCase();
+                  let normalizedStatus = "absent";
+                  if (["present", "p", "true", "scanned", "1"].includes(lower)) {
+                    normalizedStatus = "present";
+                  } else if (["absent", "a", "false", "0"].includes(lower)) {
+                    normalizedStatus = "absent";
+                  } else if (["excused", "e"].includes(lower)) {
+                    normalizedStatus = "excused";
+                  } else if (lower) {
+                    normalizedStatus = lower;
+                  }
+
+                  const date = d.date || d.createdAt?.toDate?.()?.toISOString?.().split("T")[0] || new Date().toISOString().split("T")[0];
+                  const key = `${sessionId}_${date}`;
+
+                  if (!reportsMap[key]) {
+                    reportsMap[key] = {
+                      id: key,
+                      sessionId,
+                      sessionName,
+                      date,
+                      students: [],
+                      present: 0,
+                      absent: 0,
+                      excused: 0,
+                      total: 0,
+                    };
+                  }
+
+                  if (reportsMap[key].students.length === 0 && allStudents.length > 0) {
+                    reportsMap[key].students = allStudents.map((s) => ({
+                      studentUid: s.studentUid,
+                      studentName: s.studentName,
+                      status: "absent",
+                    }));
+                  }
+
+                  const existingIndex = reportsMap[key].students.findIndex((s) => s.studentUid === d.studentUid);
+                  const studentEntry = {
+                    studentUid: d.studentUid,
+                    studentName: d.studentName || "Unknown",
+                    status: normalizedStatus,
+                    markedBy: d.markedBy || null,
+                    createdAt: d.createdAt || null,
+                  };
+
+                  if (existingIndex >= 0) {
+                    reportsMap[key].students[existingIndex] = studentEntry;
+                  } else {
+                    reportsMap[key].students.push(studentEntry);
+                  }
+                });
+
+                Object.keys(reportsMap).forEach((k) => {
+                  if (k.startsWith(sessionId + "_")) {
+                    const entry = reportsMap[k];
+                    entry.present = entry.students.filter((s) => (s.status || "").toString().toLowerCase() === "present").length;
+                    entry.absent = entry.students.filter((s) => (s.status || "").toString().toLowerCase() === "absent").length;
+                    entry.excused = entry.students.filter((s) => (s.status || "").toString().toLowerCase() === "excused").length;
+                    entry.total = entry.students.length;
+                  }
+                });
+
+                const arr = Object.values(reportsMap).sort((a, b) => {
+                  if (a.date === b.date) return a.sessionName.localeCompare(b.sessionName);
+                  return b.date.localeCompare(a.date);
+                });
+
+                if (mounted) {
+                  setReports(arr);
+                }
+              },
+              (err) => {
+                console.error("attendance onSnapshot error:", err);
+                if (mounted) setReports(Object.values(reportsMap));
+              }
+            );
+
+            subsRef.current.push(unsub);
+          }
+
+          if (mounted) setLoading(false);
+        } catch (err) {
+          console.error("fetch sessions for reports error", err);
+          if (mounted) {
+            setReports([]);
+            setLoading(false);
+          }
+        }
+      })();
+
+      return () => {
+        mounted = false;
+        subsRef.current.forEach((u) => typeof u === "function" && u());
+        subsRef.current = [];
+      };
+    }, [teacher?.uid])
+  );
+
+  const openModal = (entry) => setSelected(entry);
+  const closeModal = () => setSelected(null);
+
+  const renderItem = ({ item }) => (
+    <TouchableOpacity style={styles.card} onPress={() => openModal(item)}>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.title}>{item.sessionName}</Text>
+        <Text style={styles.sub}>{item.date}</Text>
+        <Text style={styles.small}>{item.total} total • {item.present} present • {item.absent} absent</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={20} color="#475569" />
+    </TouchableOpacity>
+  );
+
+  return (
+    <View style={styles.container}>
+      {loading ? (
+        <ActivityIndicator size="large" color="#2563EB" style={{ marginTop: 30 }} />
+      ) : (
+        <>
+          <Text style={styles.header}>Attendance Reports</Text>
+          {reports.length === 0 ? (
+            <View style={styles.empty}>
+              <Ionicons name="document-text-outline" size={48} color="#CBD5E1" />
+              <Text style={{ color: "#64748b", marginTop: 10 }}>No attendance recorded yet</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={reports}
+              keyExtractor={(item) => item.id}
+              renderItem={renderItem}
+              contentContainerStyle={{ paddingBottom: 40 }}
+            />
+          )}
+        </>
+      )}
+
+      <Modal visible={!!selected} animationType="slide" transparent={true} onRequestClose={closeModal}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{selected?.sessionName}</Text>
+              <Text style={styles.modalDate}>{selected?.date}</Text>
             </View>
 
-            {/* DATE SELECTOR */}
-            <TouchableOpacity
-                style={styles.dateSelector}
-                onPress={() => setShowDatePicker(true)}
-            >
-                <Ionicons name="calendar-outline" size={24} color="#1E3A8A" />
-                <Text style={styles.dateText}>{formattedDate}</Text>
-                <Ionicons name="chevron-down" size={24} color="#1E3A8A" />
-            </TouchableOpacity>
+            <View style={styles.modalBody}>
+              <Text style={styles.modalSummary}>
+                Total: {selected?.total || 0} — Present: {selected?.present || 0} — Absent: {selected?.absent || 0}
+              </Text>
 
-            {showDatePicker && (
-                <DateTimePicker
-                    value={selectedDate}
-                    mode="date"
-                    display={Platform.OS === "ios" ? "spinner" : "default"}
-                    onChange={handleDateChange}
-                />
-            )}
+              <FlatList
+                data={selected?.students || []}
+                keyExtractor={(s) => s.studentUid || s.studentName}
+                renderItem={({ item }) => (
+                  <View style={styles.studentRow}>
+                    <View style={[
+                      styles.dot,
+                      item.status.toLowerCase() === "present" ? styles.dotPresent :
+                      item.status.toLowerCase() === "excused" ? styles.dotExcused : styles.dotAbsent
+                    ]} />
+                    <Text style={styles.studentName}>{item.studentName}</Text>
+                    <Text style={[
+                      styles.studentStatus,
+                      item.status.toLowerCase() === "present" ? { color: "#10B981" } : { color: "#EF4444" }
+                    ]}>
+                      {item.status}
+                    </Text>
+                  </View>
+                )}
+              />
+            </View>
 
-            {Platform.OS === "ios" && showDatePicker && (
-                <View style={styles.datePickerActions}>
-                    <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-                        <Text style={styles.datePickerButton}>Done</Text>
-                    </TouchableOpacity>
-                </View>
-            )}
-
-            <Text style={styles.summaryText}>
-                DAILY SUMMARY FOR {formattedDate.toUpperCase()}
-            </Text>
-
-            <ScrollView showsVerticalScrollIndicator={false}>
-                {classReports.map((item) => {
-                    const isExpanded = expandedCard === item.id;
-                    const sorted = sortByLastName(item.students);
-                    const present = sorted.filter((s) => s.status === "Present");
-                    const absent = sorted.filter((s) => s.status === "Absent");
-                    const late = sorted.filter((s) => s.status === "Late");
-
-                    return (
-                        <View key={item.id} style={[styles.card, { backgroundColor: item.color }]}>
-                            <TouchableOpacity
-                                onPress={() => toggleExpand(item.id)}
-                                style={styles.cardHeader}
-                            >
-                                <View>
-                                    <Text style={styles.className}>{item.title}</Text>
-                                    <Text style={styles.timeLabel}>Time: {item.time}</Text>
-                                </View>
-
-                                <Ionicons
-                                    name={isExpanded ? "chevron-up" : "chevron-down"}
-                                    size={26}
-                                    color="#1E3A8A"
-                                />
-                            </TouchableOpacity>
-
-                            {isExpanded && (
-                                <View style={styles.expandedArea}>
-                                    <View style={styles.studentList}>
-                                        {sorted.map((stu, index) => {
-                                            const dot =
-                                                stu.status === "Present"
-                                                    ? styles.presentDot
-                                                    : stu.status === "Absent"
-                                                    ? styles.absentDot
-                                                    : styles.lateDot;
-
-                                            return (
-                                                <View key={index} style={styles.studentRow}>
-                                                    <View style={dot} />
-                                                    <Text style={styles.studentName}>
-                                                        {stu.name} ({stu.status})
-                                                    </Text>
-                                                </View>
-                                            );
-                                        })}
-                                    </View>
-
-                                    <View style={styles.sessionSummary}>
-                                        <Text style={styles.summaryHeader}>SESSION SUMMARY</Text>
-
-                                        <Text style={styles.summaryTextSmall}>Total: {item.total}</Text>
-                                        <Text style={styles.summaryTextSmall}>Present: {present.length}</Text>
-                                        <Text style={styles.summaryTextSmall}>Absent: {absent.length}</Text>
-                                        <Text style={styles.summaryTextSmall}>Late: {late.length}</Text>
-
-                                        <Text style={styles.summaryTextSmall}>
-                                            Attendance Rate: {Math.round((present.length / item.total) * 100)}%
-                                        </Text>
-                                    </View>
-                                </View>
-                            )}
-                        </View>
-                    );
-                })}
-            </ScrollView>
-        </SafeAreaView>
-    );
+            <Pressable style={styles.closeBtn} onPress={closeModal}>
+              <Text style={styles.closeText}>Close</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
 }
 
+/* styles */
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: "#F1F5FF", paddingHorizontal: 20 },
-
-    headerRow: {
-        marginBottom: 25, // moved lower
-    },
-
-    headerTitle: { fontSize: 22, fontWeight: "800", color: "#1E3A8A" }, // bigger
-
-    dateSelector: {
-        backgroundColor: "#fff",
-        padding: 16, // bigger
-        borderRadius: 12,
-        flexDirection: "row",
-        alignItems: "center",
-        elevation: 2,
-        gap: 12,
-        marginBottom: 15,
-    },
-
-    dateText: { flex: 1, fontWeight: "700", fontSize: 16, color: "#1E3A8A" }, // bigger
-
-    datePickerActions: {
-        flexDirection: "row",
-        justifyContent: "flex-end",
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        backgroundColor: "#f0f0f0",
-    },
-    datePickerButton: {
-        color: "#2563EB",
-        fontSize: 18,
-        fontWeight: "600",
-        paddingHorizontal: 20,
-    },
-
-    summaryText: {
-        marginTop: 10,
-        marginBottom: 12,
-        color: "#475569",
-        fontWeight: "700",
-        fontSize: 14,
-    },
-
-    card: {
-        borderRadius: 16,
-        padding: 18, // bigger
-        marginBottom: 18,
-    },
-
-    cardHeader: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-    },
-
-    className: { fontSize: 18, fontWeight: "800", color: "#1E3A8A" }, // bigger
-    timeLabel: { color: "#475569", fontWeight: "600", fontSize: 15, marginTop: 3 }, // bigger
-
-    expandedArea: { marginTop: 12 },
-
-    studentList: { marginVertical: 12 },
-
-    studentRow: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
-
-    studentName: { marginLeft: 8, color: "#1E293B", fontSize: 15 }, // bigger
-
-    presentDot: { width: 12, height: 12, backgroundColor: "#22c55e", borderRadius: 50 },
-    absentDot: { width: 12, height: 12, backgroundColor: "#ef4444", borderRadius: 50 },
-    lateDot: { width: 12, height: 12, backgroundColor: "#eab308", borderRadius: 50 },
-
-    sessionSummary: {
-        backgroundColor: "rgba(255,255,255,0.75)",
-        padding: 14,
-        borderRadius: 12,
-    },
-
-    summaryHeader: { fontWeight: "800", fontSize: 16, color: "#1E3A8A", marginBottom: 6 },
-    summaryTextSmall: { fontSize: 14, color: "#334155", marginBottom: 2 },
+  container: { flex: 1, backgroundColor: "#F7FAFF", padding: 16 },
+  header: { fontSize: 20, fontWeight: "700", color: "#1E3A8A", marginBottom: 12 },
+  card: {
+    backgroundColor: "#fff",
+    padding: 14,
+    borderRadius: 12,
+    marginBottom: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: "#EEF2FF",
+  },
+  title: { fontSize: 16, fontWeight: "700", color: "#0F172A" },
+  sub: { fontSize: 13, color: "#6B7280", marginTop: 4 },
+  small: { fontSize: 12, color: "#475569", marginTop: 6 },
+  empty: { alignItems: "center", marginTop: 40 },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    maxHeight: "80%",
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    padding: 16,
+  },
+  modalHeader: { marginBottom: 8 },
+  modalTitle: { fontSize: 18, fontWeight: "800", color: "#1E293B" },
+  modalDate: { fontSize: 13, color: "#6B7280", marginTop: 4 },
+  modalBody: { marginTop: 8, marginBottom: 12 },
+  modalSummary: { fontSize: 13, color: "#475569", marginBottom: 8 },
+  studentRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
+  },
+  dot: { width: 12, height: 12, borderRadius: 12, marginRight: 12 },
+  dotPresent: { backgroundColor: "#10B981" },
+  dotAbsent: { backgroundColor: "#EF4444" },
+  dotExcused: { backgroundColor: "#F59E0B" },
+  studentName: { flex: 1, fontSize: 15, color: "#0F172A" },
+  studentStatus: { fontSize: 13, fontWeight: "700" },
+  closeBtn: {
+    backgroundColor: "#2563EB",
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: "center",
+    marginTop: 8,
+  },
+  closeText: { color: "#fff", fontWeight: "700" },
 });

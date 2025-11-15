@@ -1,116 +1,123 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   Alert,
-  Linking,
-  Switch,
+  ActivityIndicator,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
-import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { signOut } from "firebase/auth";
+import { auth } from "../../src/config/firebase";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../../src/config/firebase";
 
-export default function More() {
-  const navigation = useNavigation();
+export default function More({ navigation }) {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // ------------------ HOOKS (must stay at top level) ------------------ //
-  const [notifEnabled, setNotifEnabled] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const saved = await AsyncStorage.getItem("currentUser");
+        if (saved) {
+          setUser(JSON.parse(saved));
+          setLoading(false);
+          return;
+        }
 
-  // ------------------------------------------------------------------- //
+        const uid = await AsyncStorage.getItem("currentUserId");
+        if (uid) {
+          const userRef = doc(db, "users", uid);
+          const snap = await getDoc(userRef);
+          if (snap.exists()) {
+            setUser({ uid: snap.id, ...snap.data() });
+          }
+        }
+      } catch (err) {
+        console.error("Error loading user in More:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const user = {
-    name: "Prof. Maria Gonzales",
-    department: "Computer Science Department",
-  };
+    loadUser();
+  }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     Alert.alert("Logout", "Are you sure you want to logout?", [
       { text: "Cancel", style: "cancel" },
-      { text: "Logout", style: "destructive", onPress: () => navigation.navigate("Account") },
+      {
+        text: "Logout",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            try {
+              await signOut(auth);
+            } catch (e) {
+              console.warn("signOut warning:", e.message || e);
+            }
+
+            await AsyncStorage.multiRemove([
+              "currentUser",
+              "currentUserId",
+              "rememberedUser",
+            ]);
+
+            navigation.reset({
+              index: 0,
+              routes: [{ name: "Account" }],
+            });
+          } catch (err) {
+            console.error("Logout error:", err);
+            Alert.alert("Error", "Failed to logout. Try again.");
+          }
+        },
+      },
     ]);
   };
 
-  const handleHelp = () => {
-    Alert.alert(
-      "Help & Support",
-      "Useful Links for Attendance Tracker:\n\n- Guide: https://example.com/guide\n- FAQ: https://example.com/faq\n- Support: https://example.com/support",
-      [
-        { text: "Close", style: "cancel" },
-        { text: "Open Guide", onPress: () => Linking.openURL("https://example.com/guide") },
-        { text: "Open FAQ", onPress: () => Linking.openURL("https://example.com/faq") },
-        { text: "Contact Support", onPress: () => Linking.openURL("mailto:support@example.com") },
-      ]
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+        <ActivityIndicator size="large" color="#1E3AFA" />
+      </View>
     );
-  };
+  }
 
-  const handleFAQ = () => {
-    Alert.alert(
-      "FAQs",
-      "Frequently Asked Questions:\n\n- How to start a session?\n- How to add students?\n- How to track attendance?",
-      [
-        { text: "Close", style: "cancel" },
-        { text: "Open FAQ Page", onPress: () => Linking.openURL("https://example.com/faq") },
-      ]
-    );
-  };
+  const displayName = user?.fullname || user?.name || user?.displayName || "No name";
+  const email = user?.email || user?.gmail || user?.contact || "No email";
+  const department = user?.department || user?.section || user?.role || "—";
 
   return (
     <View style={styles.container}>
-      {/* USER INFO CARD */}
+
+      {/* SIMPLE PROFILE CARD (LEFT-ALIGNED) */}
       <View style={styles.userCard}>
-        <Text style={styles.userName}>{user.name}</Text>
-        <Text style={styles.userDept}>{user.department}</Text>
+        <Text style={styles.userName}>{displayName}</Text>
+        <Text style={styles.userDept}>{department}</Text>
       </View>
 
-      {/* -------------------- PROFILE SETTINGS -------------------- */}
-      <Text style={styles.sectionHeader}>PROFILE SETTINGS</Text>
+      {/* PROFILE INFORMATION */}
+      <Text style={styles.sectionHeader}>YOUR INFORMATION</Text>
 
-      <TouchableOpacity style={styles.rowButton}>
-        <Text style={styles.rowLabel}>Name</Text>
-        <Ionicons name="chevron-forward" size={20} color="#475569" />
-      </TouchableOpacity>
+      <View style={styles.infoCard}>
+        <Text style={styles.infoLabel}>Name:</Text>
+        <Text style={styles.infoValue}>{displayName}</Text>
 
-      <TouchableOpacity style={styles.rowButton}>
-        <Text style={styles.rowLabel}>Change Password</Text>
-        <Ionicons name="chevron-forward" size={20} color="#475569" />
-      </TouchableOpacity>
+        <Text style={styles.infoLabel}>Email:</Text>
+        <Text style={styles.infoValue}>{email}</Text>
 
-      {/* -------------------- APPLICATION PREFERENCES -------------------- */}
-      <Text style={styles.sectionHeader}>APPLICATION PREFERENCES</Text>
-
-      <View style={styles.toggleRow}>
-        <View>
-          <Text style={styles.rowLabel}>Notification Preferences</Text>
-          <Text style={styles.smallLabel}>Status: {notifEnabled ? "On" : "Off"}</Text>
-        </View>
-        <Switch
-          value={notifEnabled}
-          onValueChange={setNotifEnabled}
-          thumbColor={notifEnabled ? "#2563EB" : "#CBD5E1"}
-        />
+        <Text style={styles.infoLabel}>Department / Section:</Text>
+        <Text style={styles.infoValue}>{department}</Text>
       </View>
 
-      {/* Removed Dark Mode toggle here */}
-
-      {/* -------------------- HELP & SUPPORT -------------------- */}
-      <Text style={styles.sectionHeader}>HELP & SUPPORT</Text>
-
-      <TouchableOpacity style={styles.rowButton} onPress={handleFAQ}>
-        <Text style={styles.rowLabel}>FAQs / Contact Support</Text>
-        <Ionicons name="chevron-forward" size={20} color="#475569" />
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.rowButton} onPress={handleHelp}>
-        <Text style={styles.rowLabel}>Privacy Policy</Text>
-        <Ionicons name="chevron-forward" size={20} color="#475569" />
-      </TouchableOpacity>
-
-      {/* -------------------- LOGOUT BUTTON -------------------- */}
+      {/* LOGOUT BUTTON */}
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Text style={styles.logoutText}>Logout</Text>
       </TouchableOpacity>
+
     </View>
   );
 }
@@ -120,71 +127,76 @@ export default function More() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#F5F7FF",
     padding: 20,
-    paddingTop: 55,
-    backgroundColor: "#F0F4FF",
+    paddingTop: 75,
   },
 
+  /* SIMPLE WHITE CARD HEADER */
   userCard: {
     backgroundColor: "#fff",
     padding: 20,
     borderRadius: 12,
     marginBottom: 20,
     elevation: 2,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
   },
-  userName: { fontSize: 18, fontWeight: "700", color: "#1E3A8A" },
-  userDept: { fontSize: 14, color: "#6B7280", marginTop: 2 },
+
+  userName: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#1E293B",
+    textAlign: "left",   // ← aligned left
+  },
+
+  userDept: {
+    fontSize: 14,
+    color: "#6B7280",
+    marginTop: 3,
+    textAlign: "left",   // ← aligned left
+  },
 
   sectionHeader: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "700",
-    color: "#64748B",
-    marginTop: 18,
-    marginBottom: 8,
+    color: "#475569",
+    marginTop: 20,
+    marginBottom: 10,
+    marginLeft: 2,
   },
 
-  rowButton: {
+  infoCard: {
     backgroundColor: "#fff",
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    marginBottom: 8,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    elevation: 1,
+    padding: 18,
+    borderRadius: 12,
+    marginBottom: 15,
+    elevation: 2,
   },
 
-  rowLabel: { fontSize: 15, fontWeight: "600", color: "#1E293B" },
-  smallLabel: { fontSize: 12, color: "#64748B", marginTop: 2 },
+  infoLabel: {
+    fontSize: 12,
+    color: "#6B7280",
+    marginTop: 10,
+  },
 
-  toggleRow: {
-    backgroundColor: "#fff",
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    marginBottom: 8,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+  infoValue: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#1E293B",
+    marginTop: 2,
   },
 
   logoutButton: {
     marginTop: 25,
+    backgroundColor: "red",
     paddingVertical: 14,
+    borderRadius: 12,
     alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    elevation: 1,
-    paddingRight: 250,
+    elevation: 2,
   },
 
   logoutText: {
-    fontSize: 15,
+    color: "#fff",
+    fontSize: 16,
     fontWeight: "700",
-    color: "#EF4444",
   },
 });

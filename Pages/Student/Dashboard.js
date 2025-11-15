@@ -20,8 +20,23 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import Modal from "react-native-modal";
 import * as DocumentPicker from "expo-document-picker";
-import { collection, addDoc, query, where, getDocs, doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import {
+    collection,
+    addDoc,
+    query,
+    where,
+    getDocs,
+    doc,
+    getDoc,
+    serverTimestamp,
+    setDoc,
+} from "firebase/firestore";
+import {
+    getStorage,
+    ref,
+    uploadBytes,
+    getDownloadURL,
+} from "firebase/storage";
 import { db } from "../../src/config/firebase";
 
 // Placeholder components
@@ -43,7 +58,12 @@ function DashboardHeader({ studentName, insets, onJoinPress, showJoinButton }) {
                     <Text style={[styles.headerText, { color: "#1E3A8A" }]}>
                         Welcome back,
                     </Text>
-                    <Text style={[styles.studentNameHeader, { color: "#1E3A8A" }]}>
+                    <Text
+                        style={[
+                            styles.studentNameHeader,
+                            { color: "#1E3A8A" },
+                        ]}
+                    >
                         {studentName}
                     </Text>
                 </View>
@@ -53,7 +73,9 @@ function DashboardHeader({ studentName, insets, onJoinPress, showJoinButton }) {
                         style={styles.joinClassButtonHorizontal}
                         onPress={onJoinPress}
                     >
-                        <Text style={styles.joinClassButtonText}>Join a Class</Text>
+                        <Text style={styles.joinClassButtonText}>
+                            Join a Class
+                        </Text>
                     </TouchableOpacity>
                 )}
             </View>
@@ -77,26 +99,21 @@ function DashboardMain({ route }) {
 
     const [today, setToday] = useState("");
     const [joinedClasses, setJoinedClasses] = useState([]);
-    const [activeClassId, setActiveClassId] = useState(null);
+       const [activeClassId, setActiveClassId] = useState(null);
     const [classCode, setClassCode] = useState("");
     const [joinModalVisible, setJoinModalVisible] = useState(false);
-    const [attendance, setAttendance] = useState(null);
+    const [attendance, setAttendance] = useState(null); 
     const [attachedFile, setAttachedFile] = useState(null);
     const [submittingExcuse, setSubmittingExcuse] = useState(false);
     const [loading, setLoading] = useState(false);
 
     // ======== SET DATE ========
     useEffect(() => {
-        const now = new Date();
-        const formatted = now.toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-        });
+        const formatted = new Date().toISOString().split("T")[0];
         setToday(formatted);
     }, []);
 
-    // ======== SET STUDENT FROM FIREBASE AUTH ========
+    // ======== SET STUDENT AND LOAD CLASSES ========
     useEffect(() => {
         if (user) {
             setStudent({
@@ -107,14 +124,11 @@ function DashboardMain({ route }) {
                 uid: user.uid,
             });
 
-            // Load joined classes from Firestore
             loadJoinedClasses(user.uid);
         }
     }, [user]);
 
-    // ======================================================
-    // 🔥 NEW FUNCTION: LOAD JOINED CLASSES FROM FIRESTORE
-    // ======================================================
+    // Load joined classes
     const loadJoinedClasses = async (uid) => {
         try {
             const sessionsRef = collection(db, "sessions");
@@ -125,8 +139,13 @@ function DashboardMain({ route }) {
             for (let session of sessionsSnapshot.docs) {
                 const sessionId = session.id;
 
-                // Check if this student is inside: sessions/<sessionId>/students/<uid>
-                const studentRef = doc(db, "sessions", sessionId, "students", uid);
+                const studentRef = doc(
+                    db,
+                    "sessions",
+                    sessionId,
+                    "students",
+                    uid
+                );
                 const studentSnap = await getDoc(studentRef);
 
                 if (studentSnap.exists()) {
@@ -134,16 +153,16 @@ function DashboardMain({ route }) {
 
                     classes.push({
                         id: sessionId,
-                        name: `${sessionData.subject || "Class"} (${sessionData.block || ""})`,
-                        section: sessionData.block || "",
-                        subject: sessionData.subject || "",
-                        block: sessionData.block || "",
+                        name: `${sessionData.subject} (${sessionData.block})`,
+                        section: sessionData.block,
+                        subject: sessionData.subject,
+                        block: sessionData.block,
                         days: Array.isArray(sessionData.days)
                             ? sessionData.days.join(", ")
-                            : sessionData.days || "",
-                        startTime: sessionData.startTime || "",
-                        endTime: sessionData.endTime || "",
-                        code: sessionData.code || "",
+                            : sessionData.days,
+                        startTime: sessionData.startTime,
+                        endTime: sessionData.endTime,
+                        code: sessionData.code,
                         sessions: [],
                     });
                 }
@@ -151,19 +170,19 @@ function DashboardMain({ route }) {
 
             setJoinedClasses(classes);
 
-            // auto-select first joined class
             if (classes.length > 0) {
                 setActiveClassId(classes[0].id);
             }
-
         } catch (err) {
             console.log("Error loading joined classes:", err);
         }
     };
 
-    const activeClass = joinedClasses.find((cls) => cls.id === activeClassId);
+    const activeClass = joinedClasses.find(
+        (cls) => cls.id === activeClassId
+    );
 
-    // ======== AUTO-CREATE TODAY SESSION LOCALLY ========
+    // Auto create today's session
     useEffect(() => {
         if (!activeClass) return;
 
@@ -175,9 +194,14 @@ function DashboardMain({ route }) {
 
         const updated = joinedClasses.map((cls) => {
             if (cls.id === activeClass.id) {
-                const exists = cls.sessions?.find((s) => s.date === today);
+                const exists = cls.sessions?.find(
+                    (s) => s.date === today
+                );
                 if (!exists) {
-                    cls.sessions = [todaySession, ...(cls.sessions || [])];
+                    cls.sessions = [
+                        todaySession,
+                        ...(cls.sessions || []),
+                    ];
                 }
             }
             return cls;
@@ -188,12 +212,13 @@ function DashboardMain({ route }) {
         setAttachedFile(null);
     }, [activeClassId, today]);
 
-    // ======================================================
-    // 🔥 JOIN CLASS BY CODE — NOW PERSISTENT
-    // ======================================================
+    // Join class
     const handleJoinClass = async () => {
         if (!classCode.trim()) {
-            Alert.alert("Invalid Code", "Please enter a valid class code.");
+            Alert.alert(
+                "Invalid Code",
+                "Please enter a valid class code."
+            );
             return;
         }
 
@@ -207,13 +232,13 @@ function DashboardMain({ route }) {
             const result = await getDocs(q);
 
             if (result.empty) {
-                Alert.alert("Not found", "No class found for that code.");
+                Alert.alert("Not found", "No class found.");
                 return;
             }
 
             const sessionDoc = result.docs[0];
-            const sessionId = sessionDoc.id;
             const sessionData = sessionDoc.data();
+            const sessionId = sessionDoc.id;
 
             const studentRef = doc(
                 db,
@@ -235,8 +260,9 @@ function DashboardMain({ route }) {
                 });
             }
 
-            // Local UI update — avoid duplicates
-            const alreadyJoined = joinedClasses.some((c) => c.id === sessionId);
+            const alreadyJoined = joinedClasses.some(
+                (c) => c.id === sessionId
+            );
             if (!alreadyJoined) {
                 setJoinedClasses((prev) => [
                     {
@@ -247,7 +273,7 @@ function DashboardMain({ route }) {
                         block: sessionData.block,
                         days: Array.isArray(sessionData.days)
                             ? sessionData.days.join(", ")
-                            : sessionData.days || "",
+                            : sessionData.days,
                         startTime: sessionData.startTime,
                         endTime: sessionData.endTime,
                         code: sessionData.code,
@@ -262,23 +288,20 @@ function DashboardMain({ route }) {
             setClassCode("");
 
             Alert.alert("Joined!", `You joined ${sessionData.subject}`);
-
-        } catch (err) {
-            Alert.alert("Error", err.message);
-            console.log(err);
         } finally {
             setLoading(false);
         }
     };
 
-    // ======================================================
-    // ATTENDANCE — SAME AS YOUR LOGIC
-    // ======================================================
+    // ATTENDANCE LOGIC (kept the same)
     const handleAttendance = async (status) => {
         if (!activeClass) return;
 
         const updated = joinedClasses.map((cls) => {
-            if (cls.id === activeClass.id && cls.sessions?.length > 0) {
+            if (
+                cls.id === activeClass.id &&
+                cls.sessions?.length > 0
+            ) {
                 cls.sessions[0].status = status;
             }
             return cls;
@@ -290,10 +313,16 @@ function DashboardMain({ route }) {
         try {
             setLoading(true);
 
-            const attendanceId = `${student.uid}_${today.replace(/\s+/g, "_")}`;
+            const attendanceId = `${student.uid}_${today}`;
 
             await setDoc(
-                doc(db, "sessions", activeClass.id, "attendance", attendanceId),
+                doc(
+                    db,
+                    "sessions",
+                    activeClass.id,
+                    "attendance",
+                    attendanceId
+                ),
                 {
                     studentUid: student.uid,
                     studentName: student.name,
@@ -305,22 +334,24 @@ function DashboardMain({ route }) {
                 }
             );
 
-            Alert.alert("Success", `Attendance marked as ${status}`);
-        } catch (err) {
-            Alert.alert("Error", "Failed to save attendance.");
+            Alert.alert("Success", `Attendance: ${status}`);
         } finally {
             setLoading(false);
         }
     };
 
+    // Pick file
     const handleAttachFile = async () => {
         try {
             const result = await DocumentPicker.getDocumentAsync({
                 type: "*/*",
             });
 
-            if (result.type === "success" && result.assets?.length > 0) {
-                const file = result.assets[0]; // correct!
+            if (
+                result.type === "success" &&
+                result.assets?.length > 0
+            ) {
+                const file = result.assets[0];
 
                 setAttachedFile({
                     name: file.name,
@@ -332,45 +363,41 @@ function DashboardMain({ route }) {
                 Alert.alert("File Selected", file.name);
             }
         } catch (err) {
-            console.error("Error picking file:", err);
             Alert.alert("Error", "Failed to pick file");
         }
     };
 
-    // Submit excuse letter to Firebase
+    // Submit excuse
     const handleSubmitExcuse = async () => {
         if (!activeClass) {
-            Alert.alert("No Class Selected", "Please select a class first.");
+            Alert.alert("No Class Selected");
             return;
         }
 
         if (!attachedFile) {
-            Alert.alert("No File", "Please attach a file first.");
+            Alert.alert("No File", "Attach a file first.");
             return;
         }
 
         setSubmittingExcuse(true);
 
         try {
-            // 1. Upload file to Firebase Storage
             const storage = getStorage();
             const fileName = `${student.uid}_${Date.now()}_${attachedFile.name}`;
-            const storageRef = ref(storage, `excuseLetters/${fileName}`);
+            const storageRef = ref(
+                storage,
+                `excuseLetters/${fileName}`
+            );
 
-            // Fetch file blob from local URI
             const response = await fetch(attachedFile.uri);
             const blob = await response.blob();
 
-            // Upload blob to Storage
             await uploadBytes(storageRef, blob);
-
-            // Get downloadable URL
             const downloadUrl = await getDownloadURL(storageRef);
 
-            // 2. Save metadata to Firestore excuseLetters collection
             const excusesRef = collection(db, "excuseLetters");
 
-            const excuseData = {
+            await addDoc(excusesRef, {
                 studentUid: student.uid,
                 fullname: student.name,
                 "student-id": user?.["student-id"] || "",
@@ -383,20 +410,14 @@ function DashboardMain({ route }) {
                     year: "numeric",
                 }),
                 fileName: attachedFile.name,
-                fileUrl: downloadUrl,     // 🔥 Public downloadable URL from Storage
+                fileUrl: downloadUrl,
                 reason: "",
                 status: "Pending",
                 submittedAt: serverTimestamp(),
-            };
+            });
 
-            await addDoc(excusesRef, excuseData);
-
-            Alert.alert("Success", "Excuse letter submitted to teacher.");
+            Alert.alert("Success", "Excuse submitted.");
             setAttachedFile(null);
-
-        } catch (err) {
-            console.error("Error submitting excuse:", err);
-            Alert.alert("Error", "Failed to submit excuse: " + err.message);
         } finally {
             setSubmittingExcuse(false);
         }
@@ -407,13 +428,11 @@ function DashboardMain({ route }) {
         studentName: student.name,
         section: activeClass ? activeClass.section : student.section,
         sessionId:
-            activeClass && activeClass.sessions && activeClass.sessions[0]
-                ? activeClass.sessions[0].id
-                : null,
-        classId: activeClass ? activeClass.id : null,
+            activeClass?.sessions?.[0]?.id || null,
+        classId: activeClass?.id || null,
     });
 
-    // ================= UI  =======================
+    // ================= UI ====================
     return (
         <View style={styles.mainContainer}>
             <DashboardHeader
@@ -423,7 +442,13 @@ function DashboardMain({ route }) {
                 showJoinButton={joinedClasses.length > 0}
             />
 
-            <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: 30 }]}>
+            <ScrollView
+                contentContainerStyle={[
+                    styles.scrollContent,
+                    { paddingTop: 30 },
+                ]}
+            >
+                {/* NO CLASSES */}
                 {joinedClasses.length === 0 && (
                     <View style={styles.emptyContainer}>
                         <Text style={styles.emptyTitle}>
@@ -443,14 +468,24 @@ function DashboardMain({ route }) {
                     </View>
                 )}
 
+                {/* CLASS LIST */}
                 {joinedClasses.map((cls) => {
                     const isActive = cls.id === activeClassId;
                     return (
-                        <View key={cls.id} style={[styles.classCard, isActive ? styles.activeClassCard : null]}>
+                        <View
+                            key={cls.id}
+                            style={[
+                                styles.classCard,
+                                isActive
+                                    ? styles.activeClassCard
+                                    : null,
+                            ]}
+                        >
                             <View
                                 style={{
                                     flexDirection: "row",
-                                    justifyContent: "space-between",
+                                    justifyContent:
+                                        "space-between",
                                     alignItems: "center",
                                 }}
                             >
@@ -462,9 +497,17 @@ function DashboardMain({ route }) {
                                 {!isActive && (
                                     <TouchableOpacity
                                         style={styles.selectButton}
-                                        onPress={() => setActiveClassId(cls.id)}
+                                        onPress={() =>
+                                            setActiveClassId(
+                                                cls.id
+                                            )
+                                        }
                                     >
-                                        <Text style={styles.selectButtonText}>
+                                        <Text
+                                            style={
+                                                styles.selectButtonText
+                                            }
+                                        >
                                             Select
                                         </Text>
                                     </TouchableOpacity>
@@ -473,6 +516,7 @@ function DashboardMain({ route }) {
 
                             {isActive && (
                                 <>
+                                    {/* QR CODE */}
                                     <View style={styles.qrContainer}>
                                         <QRCode
                                             value={qrData}
@@ -480,96 +524,121 @@ function DashboardMain({ route }) {
                                             color="#2563EB"
                                             backgroundColor="white"
                                         />
-                                        <Text style={styles.qrLabel}>
-                                            Scan this code for attendance
-                                        </Text>
-                                    </View>
-
-                                    <View style={styles.buttonRow}>
-                                        <TouchableOpacity
-                                            style={[
-                                                styles.attendanceButton,
-                                                attendance === "Present" &&
-                                                    styles.presentButtonActive,
-                                            ]}
-                                            onPress={() =>
-                                                handleAttendance("Present")
-                                            }
-                                        >
-                                            <Text
-                                                style={[
-                                                    styles.buttonText,
-                                                    attendance === "Present" &&
-                                                        styles.presentText,
-                                                ]}
-                                            >
-                                                PRESENT
-                                            </Text>
-                                        </TouchableOpacity>
-
-                                        <TouchableOpacity
-                                            style={[
-                                                styles.attendanceButton,
-                                                attendance === "Absent" &&
-                                                    styles.absentButtonActive,
-                                            ]}
-                                            onPress={() =>
-                                                handleAttendance("Absent")
-                                            }
-                                        >
-                                            <Text
-                                                style={[
-                                                    styles.buttonText,
-                                                    attendance === "Absent" &&
-                                                        styles.absentText,
-                                                ]}
-                                            >
-                                                ABSENT
-                                            </Text>
-                                        </TouchableOpacity>
-                                    </View>
-
-                                    {attendance && (
                                         <Text
-                                            style={[
-                                                styles.statusIndicator,
-                                                attendance === "Present"
-                                                    ? styles.statusPresent
-                                                    : styles.statusAbsent,
-                                            ]}
+                                            style={styles.qrLabel}
                                         >
-                                            Status: {attendance}
+                                            Scan this code for
+                                            attendance
                                         </Text>
-                                    )}
+                                    </View>
 
-                                    {/* Attach Excuse Letter */}
+                                    {/* 🚨 REMOVED UI: Your Attendance + Awaiting teacher scan */}
+
+                                    {/* ATTACH EXCUSE */}
                                     {!attachedFile ? (
                                         <TouchableOpacity
-                                            style={[styles.joinClassButton, { marginTop: 15, backgroundColor: "#F59E0B" }]}
-                                            onPress={handleAttachFile}
+                                            style={[
+                                                styles.joinClassButton,
+                                                {
+                                                    marginTop:
+                                                        15,
+                                                    backgroundColor:
+                                                        "#F59E0B",
+                                                },
+                                            ]}
+                                            onPress={
+                                                handleAttachFile
+                                            }
                                         >
-                                            <Text style={styles.joinClassButtonText}>Attach Excuse Letter</Text>
+                                            <Text
+                                                style={
+                                                    styles.joinClassButtonText
+                                                }
+                                            >
+                                                Attach Excuse
+                                                Letter
+                                            </Text>
                                         </TouchableOpacity>
                                     ) : (
-                                        <View style={{ marginTop: 10, padding: 10, backgroundColor: "#FEF3C7", borderRadius: 8 }}>
-                                            <Text style={{ fontSize: 14, color: "#92400E", fontWeight: "600", marginBottom: 8 }}>
-                                                File: {attachedFile.name}
+                                        <View
+                                            style={{
+                                                marginTop: 10,
+                                                padding: 10,
+                                                backgroundColor:
+                                                    "#FEF3C7",
+                                                borderRadius: 8,
+                                            }}
+                                        >
+                                            <Text
+                                                style={{
+                                                    fontSize:
+                                                        14,
+                                                    color: "#92400E",
+                                                    fontWeight:
+                                                        "600",
+                                                    marginBottom: 8,
+                                                }}
+                                            >
+                                                File:{" "}
+                                                {
+                                                    attachedFile.name
+                                                }
                                             </Text>
-                                            <View style={{ flexDirection: "row", gap: 10 }}>
+                                            <View
+                                                style={{
+                                                    flexDirection:
+                                                        "row",
+                                                    gap: 10,
+                                                }}
+                                            >
                                                 <TouchableOpacity
-                                                    style={[styles.joinClassButton, { flex: 1, backgroundColor: "#10B981" }]}
-                                                    onPress={handleSubmitExcuse}
-                                                    disabled={submittingExcuse}
+                                                    style={[
+                                                        styles.joinClassButton,
+                                                        {
+                                                            flex: 1,
+                                                            backgroundColor:
+                                                                "#10B981",
+                                                        },
+                                                    ]}
+                                                    onPress={
+                                                        handleSubmitExcuse
+                                                    }
+                                                    disabled={
+                                                        submittingExcuse
+                                                    }
                                                 >
-                                                    <Text style={styles.joinClassButtonText}>
-                                                        {submittingExcuse ? "Submitting..." : "Submit Excuse"}
+                                                    <Text
+                                                        style={
+                                                            styles.joinClassButtonText
+                                                        }
+                                                    >
+                                                        {submittingExcuse
+                                                            ? "Submitting..."
+                                                            : "Submit Excuse"}
                                                     </Text>
                                                 </TouchableOpacity>
                                                 <TouchableOpacity
-                                                    style={[styles.joinClassButton, { flex: 1, backgroundColor: "#EF4444" }]}
-                                                    onPress={() => setAttachedFile(null)}
+                                                    style={[
+                                                        styles.joinClassButton,
+                                                        {
+                                                            flex: 1,
+                                                            backgroundColor:
+                                                                "#EF4444",
+                                                        },
+                                                    ]}
+                                                    onPress={() =>
+                                                        setAttachedFile(
+                                                            null
+                                                        )
+                                                    }
                                                 >
-                                                    <Text style={styles.joinClassButtonText}>Cancel</Text>
+                                                    <Text
+                                                        style={
+                                                            styles.joinClassButtonText
+                                                        }
+                                                    >
+                                                        Cancel
+                                                    </Text>
                                                 </TouchableOpacity>
                                             </View>
                                         </View>
@@ -580,16 +649,21 @@ function DashboardMain({ route }) {
                     );
                 })}
 
+                {/* JOIN CLASS MODAL */}
                 <Modal
                     isVisible={joinModalVisible}
-                    onBackdropPress={() => setJoinModalVisible(false)}
+                    onBackdropPress={() =>
+                        setJoinModalVisible(false)
+                    }
                     backdropOpacity={0.5}
                     animationIn="zoomIn"
                     animationOut="zoomOut"
                     style={styles.centeredModal}
                 >
                     <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>Join Class</Text>
+                        <Text style={styles.modalTitle}>
+                            Join Class
+                        </Text>
                         <TextInput
                             style={styles.input}
                             placeholder="Enter Class Code"
@@ -602,7 +676,9 @@ function DashboardMain({ route }) {
                             onPress={handleJoinClass}
                             disabled={loading}
                         >
-                            <Text style={styles.joinButtonText}>
+                            <Text
+                                style={styles.joinButtonText}
+                            >
                                 {loading ? "Joining..." : "Join"}
                             </Text>
                         </TouchableOpacity>
@@ -641,7 +717,9 @@ export default function Dashboard() {
         ),
         AttachLetter: ({ focused, color }) => (
             <MaterialIcons
-                name={focused ? "attach-file" : "attachment"}
+                name={
+                    focused ? "attach-file" : "attachment"
+                }
                 size={24}
                 color={color}
             />
@@ -671,9 +749,13 @@ export default function Dashboard() {
                         paddingBottom: 5 + insets.bottom,
                     },
                     tabBarIcon: ({ color, focused }) => {
-                        const IconComponent = tabIcons[route.name];
+                        const IconComponent =
+                            tabIcons[route.name];
                         return IconComponent ? (
-                            <IconComponent color={color} focused={focused} />
+                            <IconComponent
+                                color={color}
+                                focused={focused}
+                            />
                         ) : null;
                     },
                 })}
@@ -681,7 +763,9 @@ export default function Dashboard() {
                 <Tab.Screen
                     name="DashboardMain"
                     component={DashboardMain}
-                    initialParams={{ user: route.params?.user }}
+                    initialParams={{
+                        user: route.params?.user,
+                    }}
                     options={{ title: "Home" }}
                 />
                 <Tab.Screen
@@ -707,7 +791,10 @@ export default function Dashboard() {
 // ====================== STYLES =======================
 const styles = StyleSheet.create({
     mainContainer: { flex: 1, backgroundColor: "#F0F4FF" },
-    headerGradient: { paddingBottom: 15, paddingHorizontal: 20 },
+    headerGradient: {
+        paddingBottom: 15,
+        paddingHorizontal: 20,
+    },
     headerHorizontal: {
         flexDirection: "row",
         justifyContent: "space-between",
@@ -715,11 +802,13 @@ const styles = StyleSheet.create({
     },
     headerText: { fontSize: 13 },
     studentNameHeader: { fontSize: 18, fontWeight: "bold" },
+
     scrollContent: {
         paddingBottom: 40,
         alignItems: "center",
         minHeight: height - 100,
     },
+
     qrContainer: {
         backgroundColor: "white",
         padding: 15,
@@ -738,6 +827,7 @@ const styles = StyleSheet.create({
         color: "#1E3A8A",
         textAlign: "center",
     },
+
     joinClassButtonHorizontal: {
         backgroundColor: "#2563EB",
         paddingVertical: 10,
@@ -755,6 +845,7 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: "bold",
     },
+
     classCard: {
         width: width * 0.9,
         backgroundColor: "#fff",
@@ -767,49 +858,28 @@ const styles = StyleSheet.create({
         shadowRadius: 6,
         elevation: 4,
     },
-    activeClassCard: { borderColor: "#2563EB", borderWidth: 2 },
-    className: { fontSize: 16, fontWeight: "700", color: "#1E3A8A" },
-    classSection: { fontSize: 14, color: "#555", marginTop: 3 },
+    activeClassCard: {
+        borderColor: "#2563EB",
+        borderWidth: 2,
+    },
+
+    className: {
+        fontSize: 16,
+        fontWeight: "700",
+        color: "#1E3A8A",
+    },
+
     selectButton: {
         backgroundColor: "#2563EB",
         paddingVertical: 6,
         paddingHorizontal: 12,
         borderRadius: 8,
     },
-    selectButtonText: { color: "#fff", fontWeight: "bold" },
-    historyRow: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        paddingVertical: 2,
-    },
-    buttonRow: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        marginTop: 15,
-    },
-    attendanceButton: {
-        flex: 1,
-        marginHorizontal: 5,
-        paddingVertical: 14,
-        borderRadius: 10,
-        backgroundColor: "#e9ecef",
-        alignItems: "center",
-    },
-    presentButtonActive: { backgroundColor: "#22c55e" },
-    absentButtonActive: { backgroundColor: "#ef4444" },
-    buttonText: { fontSize: 15, fontWeight: "700", color: "#333" },
-    presentText: { color: "#fff" },
-    absentText: { color: "#fff" },
-    statusIndicator: {
-        marginTop: 15,
-        padding: 10,
-        borderRadius: 8,
-        textAlign: "center",
+    selectButtonText: {
+        color: "#fff",
         fontWeight: "bold",
-        fontSize: 16,
     },
-    statusPresent: { backgroundColor: "#D1FAE5", color: "#059669" },
-    statusAbsent: { backgroundColor: "#FEE2E2", color: "#EF4444" },
+
     centeredModal: {
         justifyContent: "center",
         alignItems: "center",
@@ -847,6 +917,7 @@ const styles = StyleSheet.create({
         color: "#fff",
         fontWeight: "bold",
     },
+
     emptyContainer: {
         flex: 1,
         justifyContent: "center",

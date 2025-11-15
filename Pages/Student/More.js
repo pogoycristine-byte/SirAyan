@@ -1,193 +1,203 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
-    View,
-    Text,
-    StyleSheet,
-    TouchableOpacity,
-    StatusBar,
-    Alert,
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
-    import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useNavigation, CommonActions } from "@react-navigation/native";
-import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { signOut } from "firebase/auth";
+import { auth } from "../../src/config/firebase";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../../src/config/firebase";
 
-// Import student sub-screens
-import Account from "./SulodsaMore/Account";
-import Security from "./SulodsaMore/Security";
-import Support from "./SulodsaMore/Support";
-import About from "./SulodsaMore/About";
+export default function More({ navigation }) {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-export default function More() {
-    const [activeScreen, setActiveScreen] = useState("Settings");
-    const insets = useSafeAreaInsets();
-    const navigation = useNavigation();
-
-    const goBack = () => setActiveScreen("Settings");
-
-    const handleLogout = () => {
-        Alert.alert("Confirm Logout", "Are you sure you want to log out?", [
-            { text: "Cancel", style: "cancel" },
-            {
-                text: "Logout",
-                style: "destructive",
-                onPress: () => {
-                    navigation.dispatch(
-                        CommonActions.reset({
-                            index: 0,
-                            routes: [{ name: "Account" }],
-                        })
-                    );
-                },
-            },
-        ]);
-    };
-
-    const menuItems = [
-        { label: "Account", key: "Account", icon: "person-outline" },
-        { label: "Security", key: "Security", icon: "lock-closed-outline" },
-        { label: "Help and Support", key: "Support", icon: "help-circle-outline" },
-        { label: "About Us", key: "About", icon: "information-circle-outline" },
-    ];
-
-    // ---------------- SETTINGS MAIN PAGE ----------------
-    const renderSettingsMenu = () => (
-        <View style={[styles.container, { paddingTop: insets.top + 10 }]}>
-            <StatusBar backgroundColor="#F0F4FF" barStyle="dark-content" />
-
-            {/* Student Card */}
-            <View style={styles.userCard}>
-                <Ionicons name="person-circle-outline" size={60} color="#1E3A8A" />
-                <View style={{ marginLeft: 15 }}>
-                    <Text style={styles.userName}>Student User</Text>
-                    <Text style={styles.userDept}>BSCS Department</Text>
-                </View>
-            </View>
-
-            {/* Section header */}
-            <Text style={styles.sectionHeader}>SETTINGS</Text>
-
-            {/* Settings Menu */}
-            {menuItems.map((item, index) => (
-                <TouchableOpacity
-                    key={index}
-                    style={styles.rowButton}
-                    onPress={() => setActiveScreen(item.key)}
-                >
-                    <View style={styles.rowLeft}>
-                        <Ionicons name={item.icon} size={22} color="#475569" />
-                        <Text style={styles.rowLabel}>{item.label}</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={20} color="#475569" />
-                </TouchableOpacity>
-            ))}
-
-            {/* Logout */}
-            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-                <Ionicons name="log-out-outline" size={20} color="#EF4444" />
-                <Text style={styles.logoutText}>Logout</Text>
-            </TouchableOpacity>
-        </View>
-    );
-
-    // ---------------- SCREEN ROUTER ----------------
-    const renderScreen = () => {
-        switch (activeScreen) {
-            case "Account":
-                return <Account goBack={goBack} />;
-
-            case "Security":
-                return <Security goBack={goBack} />;
-
-            case "Support":
-                return <Support goBack={goBack} />;
-
-            case "About":
-                return <About goBack={goBack} />;
-
-            default:
-                return renderSettingsMenu();
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const saved = await AsyncStorage.getItem("currentUser");
+        if (saved) {
+          setUser(JSON.parse(saved));
+          setLoading(false);
+          return;
         }
+
+        const uid = await AsyncStorage.getItem("currentUserId");
+        if (uid) {
+          const userRef = doc(db, "users", uid);
+          const snap = await getDoc(userRef);
+          if (snap.exists()) {
+            setUser({ uid: snap.id, ...snap.data() });
+          }
+        }
+      } catch (err) {
+        console.error("Error loading user in More:", err);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    return renderScreen();
+    loadUser();
+  }, []);
+
+  const handleLogout = async () => {
+    Alert.alert("Logout", "Are you sure you want to logout?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Logout",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            try {
+              await signOut(auth);
+            } catch (e) {
+              console.warn("signOut warning:", e.message || e);
+            }
+
+            await AsyncStorage.multiRemove([
+              "currentUser",
+              "currentUserId",
+              "rememberedUser",
+            ]);
+
+            navigation.reset({
+              index: 0,
+              routes: [{ name: "Account" }],
+            });
+          } catch (err) {
+            console.error("Logout error:", err);
+            Alert.alert("Error", "Failed to logout. Try again.");
+          }
+        },
+      },
+    ]);
+  };
+
+  // Extract display values (no conditional returns before this)
+  const displayName =
+    user?.fullname || user?.name || user?.displayName || "No name";
+  const email = user?.email || user?.gmail || user?.contact || "No email";
+  const department = user?.department || user?.section || user?.role || "—";
+
+  // RENDER WITH CONDITIONAL CONTENT (not conditional returns)
+  return (
+    <View style={styles.container}>
+      {loading ? (
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+          <ActivityIndicator size="large" color="#1E3AFA" />
+        </View>
+      ) : (
+        <>
+          {/* SIMPLE PROFILE CARD (LEFT-ALIGNED) */}
+          <View style={styles.userCard}>
+            <Text style={styles.userName}>{displayName}</Text>
+            <Text style={styles.userDept}>{department}</Text>
+          </View>
+
+          {/* PROFILE INFORMATION */}
+          <Text style={styles.sectionHeader}>YOUR INFORMATION</Text>
+
+          <View style={styles.infoCard}>
+            <Text style={styles.infoLabel}>Name:</Text>
+            <Text style={styles.infoValue}>{displayName}</Text>
+
+            <Text style={styles.infoLabel}>Email:</Text>
+            <Text style={styles.infoValue}>{email}</Text>
+
+            <Text style={styles.infoLabel}>Department / Section:</Text>
+            <Text style={styles.infoValue}>{department}</Text>
+          </View>
+
+          {/* LOGOUT BUTTON */}
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+            <Text style={styles.logoutText}>Logout</Text>
+          </TouchableOpacity>
+        </>
+      )}
+    </View>
+  );
 }
 
-// ---------------- STYLES ----------------
+/* --------------------------- STYLES --------------------------- */
+
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        padding: 20,
-        backgroundColor: "#F0F4FF",
-    },
+  container: {
+    flex: 1,
+    backgroundColor: "#F5F7FF",
+    padding: 20,
+    paddingTop: 75,
+  },
 
-    userCard: {
-        flexDirection: "row",
-        backgroundColor: "#fff",
-        padding: 20,
-        borderRadius: 12,
-        marginBottom: 20,
-        elevation: 2,
-        shadowColor: "#000",
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-        shadowOffset: { width: 0, height: 2 },
-        alignItems: "center",
-    },
+  /* SIMPLE WHITE CARD HEADER */
+  userCard: {
+    backgroundColor: "#fff",
+    padding: 20,
+    borderRadius: 12,
+    marginBottom: 20,
+    elevation: 2,
+  },
 
-    userName: { fontSize: 18, fontWeight: "700", color: "#1E3A8A" },
-    userDept: { fontSize: 14, color: "#6B7280", marginTop: 2 },
+  userName: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#1E293B",
+    textAlign: "left",
+  },
 
-    sectionHeader: {
-        fontSize: 13,
-        fontWeight: "700",
-        color: "#64748B",
-        marginBottom: 10,
-        marginLeft: 2,
-    },
+  userDept: {
+    fontSize: 14,
+    color: "#6B7280",
+    marginTop: 3,
+    textAlign: "left",
+  },
 
-    rowButton: {
-        backgroundColor: "#fff",
-        paddingVertical: 14,
-        paddingHorizontal: 14,
-        borderRadius: 10,
-        marginBottom: 10,
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        elevation: 1,
-        shadowColor: "#000",
-        shadowOpacity: 0.05,
-        shadowRadius: 3,
-    },
+  sectionHeader: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#475569",
+    marginTop: 20,
+    marginBottom: 10,
+    marginLeft: 2,
+  },
 
-    rowLeft: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
-    },
+  infoCard: {
+    backgroundColor: "#fff",
+    padding: 18,
+    borderRadius: 12,
+    marginBottom: 15,
+    elevation: 2,
+  },
 
-    rowLabel: {
-        fontSize: 15,
-        fontWeight: "600",
-        color: "#1E293B",
-    },
+  infoLabel: {
+    fontSize: 12,
+    color: "#6B7280",
+    marginTop: 10,
+  },
 
-    logoutButton: {
-        marginTop: 25,
-        paddingVertical: 14,
-        backgroundColor: "#fff",
-        borderRadius: 10,
-        flexDirection: "row",
-        justifyContent: "center",
-        alignItems: "center",
-        elevation: 1,
-        gap: 10,
-        paddingRight: 210,
-    },
+  infoValue: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#1E293B",
+    marginTop: 2,
+  },
 
-    logoutText: {
-        fontSize: 15,
-        fontWeight: "700",
-        color: "#EF4444",
-    },
+  logoutButton: {
+    marginTop: 25,
+    backgroundColor: "red",
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    elevation: 2,
+  },
+
+  logoutText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
+  },
 });

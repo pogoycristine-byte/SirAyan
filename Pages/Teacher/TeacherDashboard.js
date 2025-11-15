@@ -721,7 +721,6 @@ const styles = StyleSheet.create({
   safeAreaUnique: { flex: 1, backgroundColor: "#F0F4FF" },
   headerUnique: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   headerLeftUnique: { flexDirection: "row", alignItems: "center" },
-  profileImageUnique: { width: 44, height: 44, borderRadius: 22, backgroundColor: "#fff", marginRight: 10 },
   headerTextUnique: { fontSize: 12, lineHeight: 14 },
   teacherNameUnique: { fontSize: 16, fontWeight: "bold", lineHeight: 18 },
   departmentTextUnique: { fontSize: 11, lineHeight: 12 },

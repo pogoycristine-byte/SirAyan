@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import Modal from "react-native-modal";
 import * as DocumentPicker from "expo-document-picker";
+import * as Linking from "expo-linking";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -32,7 +33,6 @@ import {
   getDocs,
 } from "firebase/firestore";
 import { db } from "../../src/config/firebase";
-import * as Linking from "expo-linking";
 
 export default function ManageStudents({ route, navigation }) {
   const insets = useSafeAreaInsets();
@@ -53,7 +53,6 @@ export default function ManageStudents({ route, navigation }) {
   // View Student Modal
   const [viewModalVisible, setViewModalVisible] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
-  const [studentExcuses, setStudentExcuses] = useState([]);
 
   // Search
   const [searchQuery, setSearchQuery] = useState("");
@@ -150,15 +149,16 @@ export default function ManageStudents({ route, navigation }) {
     ]);
   };
 
-  // ---------------- view student ----------------
+  // ---------------- view student (FIXED SECTION/BLOCK HERE) ----------------
   const viewStudent = async (student) => {
     try {
       let enriched = { ...student };
+
       let uid = student.uid || student.id || student.studentUid || student.userId || null;
 
       if (!uid && (student.email || student.username || student.fullname)) {
         const usersCol = collection(db, "users");
-        let q;
+        let q = null;
         if (student.email) q = query(usersCol, where("email", "==", student.email));
         else if (student.username) q = query(usersCol, where("username", "==", student.username));
         else q = query(usersCol, where("fullname", "==", student.fullname));
@@ -180,19 +180,17 @@ export default function ManageStudents({ route, navigation }) {
             fullname: enriched.fullname || ud.fullname || ud.name || "",
             "student-id": enriched["student-id"] || ud["student-id"] || ud.studentId || "",
             year: enriched.year || ud.year || "",
-            section: enriched.section || ud.section || ud.block || "",
+
+            // ---------------- FIXED SECTION/BLOCK ----------------
+            section: ud.section || enriched.section || "",
+            block: ud.block || enriched.block || "",
+            // -----------------------------------------------------
+
             email: enriched.email || ud.email || "",
             uid: String(uid),
           };
         }
       }
-
-      // Fetch excuses for this student
-      const excusesCol = collection(db, "excuses");
-      const excuseQuery = query(excusesCol, where("studentUid", "==", String(uid)));
-      const excuseSnap = await getDocs(excuseQuery);
-      const excuses = excuseSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      setStudentExcuses(excuses);
 
       setSelectedStudent(enriched);
       setViewModalVisible(true);
@@ -201,13 +199,6 @@ export default function ManageStudents({ route, navigation }) {
       setSelectedStudent(student);
       setViewModalVisible(true);
     }
-  };
-
-  const openExcuseFile = (fileUri) => {
-    if (!fileUri) return;
-    Linking.openURL(fileUri).catch(() => {
-      Alert.alert("Error", "Cannot open this file.");
-    });
   };
 
   // ---------------- attach file ----------------
@@ -263,7 +254,6 @@ export default function ManageStudents({ route, navigation }) {
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <ScrollView contentContainerStyle={{ padding: 20, paddingTop: 15 + insets.top }}>
-            
             {/* Search Bar */}
             <View style={styles.manageSearchContainer}>
               <Ionicons name="search" size={20} color="#2563EB" />
@@ -275,7 +265,7 @@ export default function ManageStudents({ route, navigation }) {
               />
             </View>
 
-            {/* Header */}
+            {/* Header Row */}
             <View style={styles.manageHeaderRow}>
               <View style={{ flexDirection: "row", alignItems: "center" }}>
                 <Ionicons name="list" size={22} color="#1E3A8A" style={{ marginRight: 8 }} />
@@ -339,34 +329,14 @@ export default function ManageStudents({ route, navigation }) {
 
                   <Text style={styles.manageDetailText}>Student ID: {selectedStudent["student-id"] || selectedStudent.uid || selectedStudent.id}</Text>
                   <Text style={styles.manageDetailText}>Year: {selectedStudent.year || ""}</Text>
+                  <Text style={styles.manageDetailText}>Section / Block: {selectedStudent.section || selectedStudent.block || ""}</Text>
                   <Text style={styles.manageDetailText}>Email: {selectedStudent.email || ""}</Text>
 
-                  {/* Excuses Section */}
-                  {studentExcuses.length > 0 && (
-                    <View style={{ marginTop: 15, borderTopWidth: 1, borderTopColor: "#E2E8F0", paddingTop: 10 }}>
-                      <Text style={{ fontWeight: "700", color: "#1E3A8A", marginBottom: 8 }}>Excuse Letters:</Text>
-                      {studentExcuses.map((excuse) => (
-                        <View key={excuse.id} style={{ backgroundColor: "#F8FAFC", padding: 10, borderRadius: 8, marginBottom: 8, borderLeftWidth: 4, borderLeftColor: excuse.status === "Approved" ? "#10B981" : "#F59E0B" }}>
-                          <Text style={{ fontWeight: "600", color: "#333", marginBottom: 4 }}>
-                            {excuse.fileName || "Excuse Letter"}
-                          </Text>
-                          <Text style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>
-                            Submitted: {excuse.submittedAt ? new Date(excuse.submittedAt.toDate()).toLocaleDateString() : "Unknown"}
-                          </Text>
-                          <Text style={{ fontSize: 12, color: "#666", marginBottom: 8 }}>
-                            Status: <Text style={{ fontWeight: "700", color: excuse.status === "Approved" ? "#10B981" : "#F59E0B" }}>{excuse.status || "Pending"}</Text>
-                          </Text>
-                          <TouchableOpacity
-                            style={{ backgroundColor: "#2563EB", padding: 8, borderRadius: 6 }}
-                            onPress={() => openExcuseFile(excuse.fileUrl)}
-                          >
-                            <Text style={{ color: "#fff", fontWeight: "600", textAlign: "center", fontSize: 12 }}>View File</Text>
-                          </TouchableOpacity>
-                        </View>
-                      ))}
-                    </View>
+                  {selectedStudent.file && (
+                    <TouchableOpacity style={[styles.manageModalAddButton, { backgroundColor: "#10B981" }]} onPress={() => viewFile(selectedStudent.file)}>
+                      <Text style={styles.manageAddButtonText}>View Attached File</Text>
+                    </TouchableOpacity>
                   )}
-
                   <TouchableOpacity style={[styles.manageModalAddButton, { marginTop: 15 }]} onPress={() => setViewModalVisible(false)}>
                     <Text style={styles.manageAddButtonText}>Close</Text>
                   </TouchableOpacity>
