@@ -56,7 +56,8 @@ export default function Register({ navigation }) {
         fullname: fullName,
         username: email,
         role,
-        section: role === "teacher" ? section : "",
+        // save the entered "Section / Block" value for both students and teachers
+        section: section || "",
         ...(role === "student"
           ? { "student-id": studentId || "", year: year || "" }
           : {}),

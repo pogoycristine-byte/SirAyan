@@ -305,12 +305,9 @@ function DashboardMain() {
         const sessionId = String(payload.classId);
         const studentName = payload.studentName || payload.studentName || "Student";
 
-        // date string matching student dashboard format
-        const date = new Date().toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        });
+        // Use ISO format YYYY-MM-DD for consistency
+        const date = new Date().toISOString().split("T")[0];
+
         const attendanceId = `${studentId}_${date.replace(/\s+/g, "_")}`;
 
         const attRef = doc(db, "sessions", sessionId, "attendance", attendanceId);

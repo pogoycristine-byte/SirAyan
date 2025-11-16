@@ -326,7 +326,7 @@ export default function ManageStudents({ route, navigation }) {
 
                   {/* YEAR REMOVED */}
 
-                  <Text style={styles.manageDetailText}>Section / Block: {selectedStudent.section || selectedStudent.block || ""}</Text>
+                  <Text style={styles.manageDetailText}>Block: {selectedStudent.section || selectedStudent.block || "—"}</Text>
                   <Text style={styles.manageDetailText}>Email: {selectedStudent.email || ""}</Text>
 
                   {selectedStudent.file && (

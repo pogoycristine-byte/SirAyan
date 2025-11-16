@@ -83,7 +83,6 @@ export default function More({ navigation }) {
     user?.fullname || user?.name || user?.displayName || "No name";
   const email = user?.email || user?.gmail || user?.contact || "No email";
   const department = user?.department || user?.section || user?.role || "—";
-  const username = user?.username || user?.userName || user?.email || "—";
 
   return (
     <View style={styles.container}>
@@ -109,10 +108,7 @@ export default function More({ navigation }) {
             <Text style={styles.infoLabel}>Email:</Text>
             <Text style={styles.infoValue}>{email}</Text>
 
-            <Text style={styles.infoLabel}>Username:</Text>
-            <Text style={styles.infoValue}>{username}</Text>
-
-            {/* UPDATED HERE */}
+            {/* BLOCK */}
             <Text style={styles.infoLabel}>Block:</Text>
             <Text style={styles.infoValue}>{department}</Text>
           </View>
@@ -209,4 +205,3 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
-

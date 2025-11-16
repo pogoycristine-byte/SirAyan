@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "ProjectSirAyan",
-    "slug": "ProjectSirAyan",
+    "name": "Attendify",
+    "slug": "Attendify",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/ba.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -20,7 +20,8 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.attendify.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -30,7 +31,13 @@
     },
     "plugins": [
       "expo-sqlite",
-      "expo-mail-composer"
-    ]
+      "expo-mail-composer",
+      "expo-font"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "0bba6575-314e-4db2-9fbc-a5c3b70eb56f"
+      }
+    }
   }
 }
