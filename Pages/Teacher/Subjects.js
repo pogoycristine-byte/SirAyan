@@ -87,7 +87,7 @@ export default function Subjects() {
 
   const renderStudent = ({ item }) => (
     <View style={styles.studentItem}>
-      <Ionicons name="person-circle" size={28} color="#2563EB" />
+      {/* avatar removed */}
       <View style={{ marginLeft: 10, flex: 1 }}>
         <Text style={styles.studentText}>{item.fullname || item.name}</Text>
         <Text style={styles.studentSubText}>

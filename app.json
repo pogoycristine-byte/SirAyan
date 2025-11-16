@@ -29,7 +29,8 @@
       "enabled": false
     },
     "plugins": [
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-mail-composer"
     ]
   }
 }

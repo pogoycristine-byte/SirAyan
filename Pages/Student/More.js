@@ -78,13 +78,13 @@ export default function More({ navigation }) {
     ]);
   };
 
-  // Extract display values (no conditional returns before this)
+  // Display values
   const displayName =
     user?.fullname || user?.name || user?.displayName || "No name";
   const email = user?.email || user?.gmail || user?.contact || "No email";
   const department = user?.department || user?.section || user?.role || "—";
+  const username = user?.username || user?.userName || user?.email || "—";
 
-  // RENDER WITH CONDITIONAL CONTENT (not conditional returns)
   return (
     <View style={styles.container}>
       {loading ? (
@@ -93,13 +93,13 @@ export default function More({ navigation }) {
         </View>
       ) : (
         <>
-          {/* SIMPLE PROFILE CARD (LEFT-ALIGNED) */}
+          {/* HEADER CARD */}
           <View style={styles.userCard}>
             <Text style={styles.userName}>{displayName}</Text>
+            <Text style={styles.userBlockLabel}>Block</Text>
             <Text style={styles.userDept}>{department}</Text>
           </View>
 
-          {/* PROFILE INFORMATION */}
           <Text style={styles.sectionHeader}>YOUR INFORMATION</Text>
 
           <View style={styles.infoCard}>
@@ -109,7 +109,11 @@ export default function More({ navigation }) {
             <Text style={styles.infoLabel}>Email:</Text>
             <Text style={styles.infoValue}>{email}</Text>
 
-            <Text style={styles.infoLabel}>Department / Section:</Text>
+            <Text style={styles.infoLabel}>Username:</Text>
+            <Text style={styles.infoValue}>{username}</Text>
+
+            {/* UPDATED HERE */}
+            <Text style={styles.infoLabel}>Block:</Text>
             <Text style={styles.infoValue}>{department}</Text>
           </View>
 
@@ -128,14 +132,13 @@ export default function More({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F5F7FF",
+    backgroundColor: "#EAF2FF",
     padding: 20,
     paddingTop: 75,
   },
 
-  /* SIMPLE WHITE CARD HEADER */
   userCard: {
-    backgroundColor: "#fff",
+    backgroundColor: "#2563EB",
     padding: 20,
     borderRadius: 12,
     marginBottom: 20,
@@ -145,15 +148,21 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#1E293B",
-    textAlign: "left",
+    color: "#FFFFFF",
+  },
+
+  userBlockLabel: {
+    fontSize: 12,
+    color: "#BFDBFE",
+    marginTop: 6,
+    textTransform: "uppercase",
+    fontWeight: "600",
   },
 
   userDept: {
     fontSize: 14,
-    color: "#6B7280",
+    color: "#DBEAFE",
     marginTop: 3,
-    textAlign: "left",
   },
 
   sectionHeader: {
@@ -162,7 +171,6 @@ const styles = StyleSheet.create({
     color: "#475569",
     marginTop: 20,
     marginBottom: 10,
-    marginLeft: 2,
   },
 
   infoCard: {
@@ -188,7 +196,7 @@ const styles = StyleSheet.create({
 
   logoutButton: {
     marginTop: 25,
-    backgroundColor: "red",
+    backgroundColor: "#2563EB",
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: "center",
@@ -201,3 +209,4 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
+

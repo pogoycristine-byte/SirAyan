@@ -180,10 +180,8 @@ export default function ManageStudents({ route, navigation }) {
             fullname: enriched.fullname || ud.fullname || ud.name || "",
             "student-id": enriched["student-id"] || ud["student-id"] || ud.studentId || "",
             year: enriched.year || ud.year || "",
-
             section: ud.section || enriched.section || "",
             block: ud.block || enriched.block || "",
-
             email: enriched.email || ud.email || "",
             uid: String(uid),
           };
@@ -238,11 +236,15 @@ export default function ManageStudents({ route, navigation }) {
     });
   };
 
-  const filteredStudents = students.filter(
-    (s) =>
-      s.fullname?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.uid?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredStudents = (() => {
+    const q = (typeof searchQuery === "string" ? searchQuery : String(searchQuery || "")).toLowerCase().trim();
+    if (!q) return students;
+    return students.filter((s) => {
+      const name = (s.fullname || s.name || "").toString().toLowerCase();
+      const uid = (s.uid || s.id || "").toString().toLowerCase();
+      return name.includes(q) || uid.includes(q);
+    });
+  })();
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#F0F4FF" }}>
@@ -264,18 +266,12 @@ export default function ManageStudents({ route, navigation }) {
               />
             </View>
 
-            {/* Header Row */}
+            {/* Header Row — Add Button Removed */}
             <View style={styles.manageHeaderRow}>
               <View style={{ flexDirection: "row", alignItems: "center" }}>
                 <Ionicons name="list" size={22} color="#1E3A8A" style={{ marginRight: 8 }} />
                 <Text style={styles.manageListTitle}>Student's List</Text>
               </View>
-              <TouchableOpacity
-                style={styles.manageAddButton}
-                onPress={() => setModalVisible(true)}
-              >
-                <Text style={styles.manageAddButtonText}>Add Student</Text>
-              </TouchableOpacity>
             </View>
 
             {/* Add / Confirm Modal */}
@@ -328,7 +324,7 @@ export default function ManageStudents({ route, navigation }) {
 
                   <Text style={styles.manageDetailText}>Student ID: {selectedStudent["student-id"] || selectedStudent.uid || selectedStudent.id}</Text>
 
-                  {/* ❌ YEAR REMOVED FROM HERE  */}
+                  {/* YEAR REMOVED */}
 
                   <Text style={styles.manageDetailText}>Section / Block: {selectedStudent.section || selectedStudent.block || ""}</Text>
                   <Text style={styles.manageDetailText}>Email: {selectedStudent.email || ""}</Text>
@@ -358,9 +354,6 @@ export default function ManageStudents({ route, navigation }) {
                     </TouchableOpacity>
                     <TouchableOpacity onPress={() => deleteStudent(item.uid || item.id)} style={styles.manageActionBtn}>
                       <Ionicons name="trash" size={20} color="#EF4444" />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => attachFile(item.uid || item.id)} style={styles.manageActionBtn}>
-                      <Ionicons name="document-text-outline" size={20} color={item.file ? "#10B981" : "#6B7280"} />
                     </TouchableOpacity>
                   </View>
                 </View>

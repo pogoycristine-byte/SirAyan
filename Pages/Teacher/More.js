@@ -80,22 +80,31 @@ export default function More({ navigation }) {
 
   if (loading) {
     return (
-      <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+      <View
+        style={[
+          styles.container,
+          { justifyContent: "center", alignItems: "center" },
+        ]}
+      >
         <ActivityIndicator size="large" color="#1E3AFA" />
       </View>
     );
   }
 
-  const displayName = user?.fullname || user?.name || user?.displayName || "No name";
+  const displayName =
+    user?.fullname || user?.name || user?.displayName || "No name";
   const email = user?.email || user?.gmail || user?.contact || "No email";
   const department = user?.department || user?.section || user?.role || "—";
 
   return (
     <View style={styles.container}>
-
-      {/* SIMPLE PROFILE CARD (LEFT-ALIGNED) */}
+      {/* SIMPLE PROFILE CARD */}
       <View style={styles.userCard}>
         <Text style={styles.userName}>{displayName}</Text>
+
+        {/* Block → Department */}
+        <Text style={styles.userBlockLabel}>Department</Text>
+
         <Text style={styles.userDept}>{department}</Text>
       </View>
 
@@ -109,7 +118,10 @@ export default function More({ navigation }) {
         <Text style={styles.infoLabel}>Email:</Text>
         <Text style={styles.infoValue}>{email}</Text>
 
-        <Text style={styles.infoLabel}>Department / Section:</Text>
+        {/* Username REMOVED */}
+
+        {/* Department */}
+        <Text style={styles.infoLabel}>Department:</Text>
         <Text style={styles.infoValue}>{department}</Text>
       </View>
 
@@ -117,7 +129,6 @@ export default function More({ navigation }) {
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Text style={styles.logoutText}>Logout</Text>
       </TouchableOpacity>
-
     </View>
   );
 }
@@ -127,14 +138,13 @@ export default function More({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F5F7FF",
+    backgroundColor: "#EAF2FF",
     padding: 20,
     paddingTop: 75,
   },
 
-  /* SIMPLE WHITE CARD HEADER */
   userCard: {
-    backgroundColor: "#fff",
+    backgroundColor: "#2563EB",
     padding: 20,
     borderRadius: 12,
     marginBottom: 20,
@@ -144,15 +154,21 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#1E293B",
-    textAlign: "left",   // ← aligned left
+    color: "#FFFFFF",
+  },
+
+  userBlockLabel: {
+    fontSize: 12,
+    color: "#BFDBFE",
+    marginTop: 6,
+    textTransform: "uppercase",
+    fontWeight: "600",
   },
 
   userDept: {
     fontSize: 14,
-    color: "#6B7280",
+    color: "#DBEAFE",
     marginTop: 3,
-    textAlign: "left",   // ← aligned left
   },
 
   sectionHeader: {
@@ -161,7 +177,6 @@ const styles = StyleSheet.create({
     color: "#475569",
     marginTop: 20,
     marginBottom: 10,
-    marginLeft: 2,
   },
 
   infoCard: {
@@ -187,7 +202,7 @@ const styles = StyleSheet.create({
 
   logoutButton: {
     marginTop: 25,
-    backgroundColor: "red",
+    backgroundColor: "#2563EB",
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: "center",

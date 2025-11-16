@@ -7,16 +7,22 @@
     "skipLibCheck": true,
     "strict": false,
     "noEmit": true,
-    "moduleResolution": "node",
-    "baseUrl": "."
+    "moduleResolution": "bundler",
+    "baseUrl": ".",
+    "esModuleInterop": true,
+    "resolveJsonModule": true
   },
   "include": [
-    "./"
+    "Pages/**/*",
+    "src/**/*",
+    "**/*.{js,jsx,ts,tsx}"
   ],
   "exclude": [
     "node_modules",
     "dist",
-    "build"
+    "build",
+    ".expo",
+    ".git"
   ],
   "extends": "expo/tsconfig.base"
 }

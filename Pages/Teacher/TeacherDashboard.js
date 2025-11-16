@@ -12,13 +12,14 @@ import {
   Alert,
   Platform,
   Dimensions,
+  Modal,
+  KeyboardAvoidingView,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Ionicons, MaterialIcons, Feather } from "@expo/vector-icons";
-import Modal from "react-native-modal";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { CameraView, useCameraPermissions } from "expo-camera";
 
@@ -144,8 +145,15 @@ function DashboardMain() {
   const [sessionDays, setSessionDays] = useState([]);
   const [startTime, setStartTime] = useState(new Date());
   const [endTime, setEndTime] = useState(new Date(Date.now() + 3600000));
-  const [showStartTimePicker, setShowStartTimePicker] = useState(false);
-  const [showEndTimePicker, setShowEndTimePicker] = useState(false);
+  // teacher will enter time manually as text
+  const [startTimeStr, setStartTimeStr] = useState(
+    startTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+  );
+  const [endTimeStr, setEndTimeStr] = useState(
+    endTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+  );
+
+  // manual time input (no time picker toggles)
 
   // Camera scanner states
   const [cameraVisible, setCameraVisible] = useState(false);
@@ -224,7 +232,7 @@ function DashboardMain() {
     Math.random().toString(36).substring(2, 8).toUpperCase();
 
   const handleCreateClass = async () => {
-    if (!sessionSubject || !sessionBlock || sessionDays.length === 0) {
+    if (!sessionSubject || !sessionBlock || sessionDays.length === 0 || !startTimeStr || !endTimeStr) {
       Alert.alert("Incomplete Fields", "Please fill in all session details.");
       return;
     }
@@ -237,14 +245,9 @@ function DashboardMain() {
         subject: sessionSubject,
         block: sessionBlock,
         days: sessionDays, // Array
-        startTime: startTime.toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        endTime: endTime.toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
+        // store exactly what teacher typed
+        startTime: startTimeStr,
+        endTime: endTimeStr,
         code: generateClassCode(),
         teacherId: teacher.id,
         isActive: true,
@@ -257,14 +260,8 @@ function DashboardMain() {
         block: sessionBlock,
         subject: sessionSubject,
         days: sessionDays.join(", "),
-        startTime: startTime.toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        endTime: endTime.toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
+        startTime: startTimeStr,
+        endTime: endTimeStr,
         code: generateClassCode(),
       };
 
@@ -276,6 +273,8 @@ function DashboardMain() {
       setSessionDays([]);
       setStartTime(new Date());
       setEndTime(new Date(Date.now() + 3600000));
+      setStartTimeStr(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+      setEndTimeStr(new Date(Date.now() + 3600000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
       setModalVisible(false);
 
       Alert.alert("Success", "Session created successfully!");
@@ -492,118 +491,111 @@ function DashboardMain() {
         </View>
 
         <Modal
-          isVisible={modalVisible}
-          onBackdropPress={() => setModalVisible(false)}
-          backdropOpacity={0.5}
-          animationIn="zoomIn"
-          animationOut="zoomOut"
-          style={styles.centeredModalUnique}
+          visible={modalVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setModalVisible(false)}
         >
-          <View style={styles.modalContentUnique}>
-            <Text style={styles.modalTitleUnique}>Create New Session</Text>
+          <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", paddingHorizontal: 20 }}>
+            <KeyboardAvoidingView
+              behavior={Platform.OS === "ios" ? "padding" : "height"}
+              keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 20}
+            >
+              <ScrollView
+                contentContainerStyle={{ paddingVertical: 10 }}
+                keyboardShouldPersistTaps="handled"
+                scrollEnabled={true}
+                nestedScrollEnabled={true}
+              >
+                <View style={styles.modalContentUnique}>
+                  <Text style={styles.modalTitleUnique}>Create New Session</Text>
 
-            <TextInput
-              style={styles.inputUnique}
-              placeholder="Subject"
-              value={sessionSubject}
-              onChangeText={setSessionSubject}
-            />
-            <TextInput
-              style={styles.inputUnique}
-              placeholder="Block"
-              value={sessionBlock}
-              onChangeText={setSessionBlock}
-            />
+                  <TextInput
+                    style={styles.inputUnique}
+                    placeholder="Subject"
+                    value={sessionSubject}
+                    onChangeText={setSessionSubject}
+                  />
+                  <TextInput
+                    style={styles.inputUnique}
+                    placeholder="Block"
+                    value={sessionBlock}
+                    onChangeText={setSessionBlock}
+                  />
 
-            <Text style={{ marginVertical: 8, fontWeight: "600" }}>
-              Select Days:
-            </Text>
-            <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-              {daysOfWeek.map((day) => (
-                <TouchableOpacity
-                  key={day}
-                  onPress={() => toggleDay(day)}
-                  style={{
-                    padding: 8,
-                    margin: 4,
-                    borderRadius: 6,
-                    borderWidth: 1,
-                    borderColor: sessionDays.includes(day)
-                      ? "#2563EB"
-                      : "#CBD5E1",
-                    backgroundColor: sessionDays.includes(day)
-                      ? "#2563EB"
-                      : "#F8FAFC",
-                  }}
-                >
-                  <Text
-                    style={{
-                      color: sessionDays.includes(day) ? "#fff" : "#000",
-                    }}
-                  >
-                    {day}
+                  <Text style={{ marginVertical: 8, fontWeight: "600" }}>
+                    Select Days:
                   </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+                  <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+                    {daysOfWeek.map((day) => (
+                      <TouchableOpacity
+                        key={day}
+                        onPress={() => toggleDay(day)}
+                        style={{
+                          padding: 8,
+                          margin: 4,
+                          borderRadius: 6,
+                          borderWidth: 1,
+                          borderColor: sessionDays.includes(day)
+                            ? "#2563EB"
+                            : "#CBD5E1",
+                          backgroundColor: sessionDays.includes(day)
+                            ? "#2563EB"
+                            : "#F8FAFC",
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color: sessionDays.includes(day) ? "#fff" : "#000",
+                          }}
+                        >
+                          {day}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
 
-            <Text style={{ marginVertical: 8, fontWeight: "600" }}>
-              Start Time:
-            </Text>
+                  <Text style={{ marginVertical: 8, fontWeight: "600" }}>
+                    Start Time (e.g. 09:00 AM):
+                  </Text>
+                  <TextInput
+                    style={styles.inputUnique}
+                    placeholder="Start time (e.g. 09:00 AM)"
+                    value={startTimeStr}
+                    onChangeText={setStartTimeStr}
+                  />
 
-            <TouchableOpacity
-              style={styles.inputUnique}
-              onPress={() => setShowStartTimePicker(true)}
-            >
-              <Text>
-                {startTime.toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </Text>
-            </TouchableOpacity>
+                  <Text style={{ marginVertical: 8, fontWeight: "600" }}>
+                    End Time (e.g. 10:00 AM):
+                  </Text>
+                  <TextInput
+                    style={styles.inputUnique}
+                    placeholder="End time (e.g. 10:00 AM)"
+                    value={endTimeStr}
+                    onChangeText={setEndTimeStr}
+                  />
 
-            {showStartTimePicker && (
-              <TimePickerScroll
-                value={startTime}
-                onTimeChange={setStartTime}
-                onClose={() => setShowStartTimePicker(false)}
-              />
-            )}
+                  <TouchableOpacity
+                    style={styles.createButtonUnique}
+                    onPress={handleCreateClass}
+                    disabled={loading}
+                  >
+                    <Text style={styles.createButtonTextUnique}>
+                      {loading ? "Creating..." : "Create Session"}
+                    </Text>
+                  </TouchableOpacity>
 
-            <Text style={{ marginVertical: 8, fontWeight: "600" }}>
-              End Time:
-            </Text>
-
-            <TouchableOpacity
-              style={styles.inputUnique}
-              onPress={() => setShowEndTimePicker(true)}
-            >
-              <Text>
-                {endTime.toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </Text>
-            </TouchableOpacity>
-
-            {showEndTimePicker && (
-              <TimePickerScroll
-                value={endTime}
-                onTimeChange={setEndTime}
-                onClose={() => setShowEndTimePicker(false)}
-              />
-            )}
-
-            <TouchableOpacity
-              style={styles.createButtonUnique}
-              onPress={handleCreateClass}
-              disabled={loading}
-            >
-              <Text style={styles.createButtonTextUnique}>
-                {loading ? "Creating..." : "Create Session"}
-              </Text>
-            </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => setModalVisible(false)}
+                    style={{ marginTop: 10, paddingVertical: 8 }}
+                  >
+                    <Text style={{ color: "#EF4444", fontWeight: "600", textAlign: "center" }}>
+                      Close
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            </KeyboardAvoidingView>
           </View>
         </Modal>
       </ScrollView>
@@ -739,7 +731,7 @@ const styles = StyleSheet.create({
   createButtonUnique: { backgroundColor: "#2563EB", paddingVertical: 12, borderRadius: 10, alignItems: "center", marginTop: 5 },
   createButtonTextUnique: { color: "#fff", fontWeight: "bold" },
   centeredModalUnique: { justifyContent: "center", alignItems: "center", paddingHorizontal: 0 },
-  modalContentUnique: { width: "85%", backgroundColor: "#fff", padding: 20, borderRadius: 20, alignItems: "stretch", maxHeight: "80%" },
+  modalContentUnique: { width: "85%", backgroundColor: "#fff", padding: 20, borderRadius: 20, alignItems: "stretch", maxHeight: "100%" },
   modalTitleUnique: { fontSize: 18, fontWeight: "700", marginBottom: 15, color: "#1E3A8A", textAlign: "center" },
   cameraContainer: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 999, backgroundColor: "#000" },
   overlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "center", alignItems: "center" },
