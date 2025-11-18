@@ -305,30 +305,30 @@ function DashboardMain() {
         const sessionId = String(payload.classId);
         const studentName = payload.studentName || payload.studentName || "Student";
 
-        // Use ISO format YYYY-MM-DD for consistency
-        const date = new Date().toISOString().split("T")[0];
+        // Use ISO format YYYY-MM-DD to match Report.js
+        const date = new Date().toISOString().split("T")[0]; // "2025-11-17"
+         
+         const attendanceId = `${studentId}_${date.replace(/\s+/g, "_")}`;
 
-        const attendanceId = `${studentId}_${date.replace(/\s+/g, "_")}`;
+         const attRef = doc(db, "sessions", sessionId, "attendance", attendanceId);
+         const attSnap = await getDoc(attRef);
+         if (attSnap.exists()) {
+           Alert.alert("Info", `${studentName} already marked for ${date}.`);
+         } else {
+           await setDoc(attRef, {
+             studentUid: studentId,
+             studentName,
+             classId: sessionId,
+             status: "Present",
+             date,
+             markedBy: teacher.id || null,
+             createdAt: serverTimestamp(),
+           });
+           Alert.alert("Success", `${studentName} marked Present for ${date}.`);
+         }
 
-        const attRef = doc(db, "sessions", sessionId, "attendance", attendanceId);
-        const attSnap = await getDoc(attRef);
-        if (attSnap.exists()) {
-          Alert.alert("Info", `${studentName} already marked for ${date}.`);
-        } else {
-          await setDoc(attRef, {
-            studentUid: studentId,
-            studentName,
-            classId: sessionId,
-            status: "Present",
-            date,
-            markedBy: teacher.id || null,
-            createdAt: serverTimestamp(),
-          });
-          Alert.alert("Success", `${studentName} marked Present for ${date}.`);
-        }
-
-        setCameraVisible(false);
-        return;
+         setCameraVisible(false);
+         return;
       }
 
       // fallback: treat scanned data as teacher-generated QR code string
@@ -493,107 +493,123 @@ function DashboardMain() {
           animationType="fade"
           onRequestClose={() => setModalVisible(false)}
         >
-          <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", paddingHorizontal: 20 }}>
-            <KeyboardAvoidingView
-              behavior={Platform.OS === "ios" ? "padding" : "height"}
-              keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 20}
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 80}
+            style={{ flex: 1 }}
+          >
+            <View
+              style={{
+                flex: 1,
+                backgroundColor: "rgba(0,0,0,0.5)",
+                justifyContent: "center",
+                alignItems: "center",
+                paddingHorizontal: 20,
+              }}
             >
               <ScrollView
-                contentContainerStyle={{ paddingVertical: 10 }}
+                contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
                 keyboardShouldPersistTaps="handled"
-                scrollEnabled={true}
-                nestedScrollEnabled={true}
+                style={{ width: "100%" }}
               >
                 <View style={styles.modalContentUnique}>
-                  <Text style={styles.modalTitleUnique}>Create New Session</Text>
+                  <ScrollView
+                    keyboardShouldPersistTaps="handled"
+                    nestedScrollEnabled={true}
+                    style={{ maxHeight: "100%" }}
+                  >
+                    <Text style={styles.modalTitleUnique}>Create New Session</Text>
 
-                  <TextInput
-                    style={styles.inputUnique}
-                    placeholder="Subject"
-                    value={sessionSubject}
-                    onChangeText={setSessionSubject}
-                  />
-                  <TextInput
-                    style={styles.inputUnique}
-                    placeholder="Block"
-                    value={sessionBlock}
-                    onChangeText={setSessionBlock}
-                  />
+                    <TextInput
+                      style={styles.inputUnique}
+                      placeholder="Subject"
+                      placeholderTextColor="#000"
+                      value={sessionSubject}
+                      onChangeText={setSessionSubject}
+                    />
+                    <TextInput
+                      style={styles.inputUnique}
+                      placeholder="Block"
+                      placeholderTextColor="#000"
+                      value={sessionBlock}
+                      onChangeText={setSessionBlock}
+                    />
 
-                  <Text style={{ marginVertical: 8, fontWeight: "600" }}>
-                    Select Days:
-                  </Text>
-                  <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-                    {daysOfWeek.map((day) => (
-                      <TouchableOpacity
-                        key={day}
-                        onPress={() => toggleDay(day)}
-                        style={{
-                          padding: 8,
-                          margin: 4,
-                          borderRadius: 6,
-                          borderWidth: 1,
-                          borderColor: sessionDays.includes(day)
-                            ? "#2563EB"
-                            : "#CBD5E1",
-                          backgroundColor: sessionDays.includes(day)
-                            ? "#2563EB"
-                            : "#F8FAFC",
-                        }}
-                      >
-                        <Text
+                    <Text style={{ marginVertical: 8, fontWeight: "600" }}>
+                      Select Days:
+                    </Text>
+                    <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+                      {daysOfWeek.map((day) => (
+                        <TouchableOpacity
+                          key={day}
+                          onPress={() => toggleDay(day)}
                           style={{
-                            color: sessionDays.includes(day) ? "#fff" : "#000",
+                            padding: 8,
+                            margin: 4,
+                            borderRadius: 6,
+                            borderWidth: 1,
+                            borderColor: sessionDays.includes(day)
+                              ? "#2563EB"
+                              : "#CBD5E1",
+                            backgroundColor: sessionDays.includes(day)
+                              ? "#2563EB"
+                              : "#F8FAFC",
                           }}
                         >
-                          {day}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
+                          <Text
+                            style={{
+                              color: sessionDays.includes(day) ? "#fff" : "#000",
+                            }}
+                          >
+                            {day}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
 
-                  <Text style={{ marginVertical: 8, fontWeight: "600" }}>
-                    Start Time (e.g. 09:00 AM):
-                  </Text>
-                  <TextInput
-                    style={styles.inputUnique}
-                    placeholder="Start time (e.g. 09:00 AM)"
-                    value={startTimeStr}
-                    onChangeText={setStartTimeStr}
-                  />
-
-                  <Text style={{ marginVertical: 8, fontWeight: "600" }}>
-                    End Time (e.g. 10:00 AM):
-                  </Text>
-                  <TextInput
-                    style={styles.inputUnique}
-                    placeholder="End time (e.g. 10:00 AM)"
-                    value={endTimeStr}
-                    onChangeText={setEndTimeStr}
-                  />
-
-                  <TouchableOpacity
-                    style={styles.createButtonUnique}
-                    onPress={handleCreateClass}
-                    disabled={loading}
-                  >
-                    <Text style={styles.createButtonTextUnique}>
-                      {loading ? "Creating..." : "Create Session"}
+                    <Text style={{ marginVertical: 8, fontWeight: "600" }}>
+                      Start Time (e.g. 09:00 AM):
                     </Text>
-                  </TouchableOpacity>
+                    <TextInput
+                      style={styles.inputUnique}
+                      placeholder="Start time (e.g. 09:00 AM)"
+                      value={startTimeStr}
+                      onChangeText={setStartTimeStr}
+                    />
 
-                  <TouchableOpacity
-                    onPress={() => setModalVisible(false)}
-                    style={{ marginTop: 10, paddingVertical: 8 }}
-                  >
-                    <Text style={{ color: "#EF4444", fontWeight: "600", textAlign: "center" }}>
-                      Close
+                    <Text style={{ marginVertical: 8, fontWeight: "600" }}>
+                      End Time (e.g. 10:00 AM):
                     </Text>
-                  </TouchableOpacity>
+                    <TextInput
+                      style={[styles.inputUnique, { backgroundColor: "#ffffff" }]}
+                      placeholder="End time (e.g. 10:00 AM)"
+                      value={endTimeStr}
+                      onChangeText={setEndTimeStr}
+                    />
+
+                    <TouchableOpacity
+                      style={styles.createButtonUnique}
+                      onPress={handleCreateClass}
+                      disabled={loading}
+                    >
+                      <Text style={styles.createButtonTextUnique}>
+                        {loading ? "Creating..." : "Create Session"}
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={() => setModalVisible(false)}
+                      style={{ marginTop: 10, paddingVertical: 8, marginBottom: 10 }}
+                    >
+                      <Text style={{ color: "#EF4444", fontWeight: "600", textAlign: "center" }}>
+                        Close
+                      </Text>
+                    </TouchableOpacity>
+                  </ScrollView>
                 </View>
               </ScrollView>
-            </KeyboardAvoidingView>
-          </View>
+            </View>
+          </KeyboardAvoidingView>
         </Modal>
       </ScrollView>
 
@@ -657,6 +673,7 @@ export default function TeacherDashboard() {
           backgroundColor: "#fff",
           borderTopLeftRadius: 20,
           borderTopRightRadius: 20,
+            paddingTop: 0,
           height: 65 + insets.bottom,
           paddingBottom: 10 + insets.bottom,
         },
@@ -724,12 +741,47 @@ const styles = StyleSheet.create({
   classDetailsUnique: { fontSize: 14, color: "#555", marginVertical: 2 },
   classCodeUnique: { fontSize: 13, color: "#2563EB", marginBottom: 8 },
   manageBtnUnique: { backgroundColor: "#10B981", paddingVertical: 8, borderRadius: 8, alignItems: "center" },
-  inputUnique: { borderWidth: 1, borderColor: "#CBD5E1", borderRadius: 10, padding: 10, marginVertical: 5, backgroundColor: "#F8FAFC" },
-  createButtonUnique: { backgroundColor: "#2563EB", paddingVertical: 12, borderRadius: 10, alignItems: "center", marginTop: 5 },
-  createButtonTextUnique: { color: "#fff", fontWeight: "bold" },
+  // smaller inputs inside modal
+  inputUnique: {
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    borderRadius: 8,
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    marginVertical: 6,
+    backgroundColor: "#F8FAFC",
+    height: 40,
+    fontSize: 14,
+  },
+  // tighter action button
+  createButtonUnique: {
+    backgroundColor: "#2563EB",
+    paddingVertical: 9,
+    borderRadius: 8,
+    alignItems: "center",
+    marginTop: 8,
+    minWidth: 120,
+    alignSelf: "center",
+  },
+  createButtonTextUnique: { color: "#fff", fontWeight: "700", fontSize: 14 },
   centeredModalUnique: { justifyContent: "center", alignItems: "center", paddingHorizontal: 0 },
-  modalContentUnique: { width: "85%", backgroundColor: "#fff", padding: 20, borderRadius: 20, alignItems: "stretch", maxHeight: "100%" },
-  modalTitleUnique: { fontSize: 18, fontWeight: "700", marginBottom: 15, color: "#1E3A8A", textAlign: "center" },
+  // reduced modal size (width and height)
+  modalContentUnique: {
+    width: Math.min(360, width * 0.75),
+    backgroundColor: "#fff",
+    padding: 14,
+    borderRadius: 12,
+    alignItems: "stretch",
+    maxHeight: "100%",
+    alignSelf: "center",
+   },
+  modalTitleUnique: {
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 10,
+    color: "#1E3A8A",
+    textAlign: "center",
+  },
   cameraContainer: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 999, backgroundColor: "#000" },
   overlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "center", alignItems: "center" },
   scanFrame: { width: 250, height: 250, borderWidth: 3, borderColor: "#2563EB", borderRadius: 10, backgroundColor: "transparent" },

@@ -105,7 +105,7 @@ export default function ManageStudents({ route, navigation }) {
         uid: tempStudent.id,
         fullname: tempStudent.name,
         year: tempStudent.year,
-        block: tempStudent.block,
+        section: tempStudent.block,
         email: tempStudent.email,
         file: null,
         joinedAt: new Date().toISOString(),
@@ -180,8 +180,8 @@ export default function ManageStudents({ route, navigation }) {
             fullname: enriched.fullname || ud.fullname || ud.name || "",
             "student-id": enriched["student-id"] || ud["student-id"] || ud.studentId || "",
             year: enriched.year || ud.year || "",
-            section: ud.section || enriched.section || "",
-            block: ud.block || enriched.block || "",
+            section: ud.section || ud.block || enriched.section || enriched.block || "",
+            block: ud.section || ud.block || enriched.section || enriched.block || "",
             email: enriched.email || ud.email || "",
             uid: String(uid),
           };
@@ -323,8 +323,6 @@ export default function ManageStudents({ route, navigation }) {
                   <Text style={styles.manageModalTitle}>{selectedStudent.fullname || selectedStudent.name}</Text>
 
                   <Text style={styles.manageDetailText}>Student ID: {selectedStudent["student-id"] || selectedStudent.uid || selectedStudent.id}</Text>
-
-                  {/* YEAR REMOVED */}
 
                   <Text style={styles.manageDetailText}>Block: {selectedStudent.section || selectedStudent.block || "—"}</Text>
                   <Text style={styles.manageDetailText}>Email: {selectedStudent.email || ""}</Text>

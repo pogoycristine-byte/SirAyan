@@ -105,6 +105,14 @@ export default function Report() {
             (attSnap) => {
               attSnap.forEach((docSnap) => {
                 const d = docSnap.data();
+                console.log("Attendance record:", {
+                  studentUid: d.studentUid,
+                  studentName: d.studentName,
+                  status: d.status,
+                  date: d.date,
+                });
+                console.log("All students UIDs:", allStudents.map(s => s.studentUid));
+
                 const rawStatus = (d.status || "").toString().trim();
                 const lower = rawStatus.toLowerCase();
                 let normalizedStatus = "absent";
@@ -119,45 +127,47 @@ export default function Report() {
                 }
 
                 const date = d.date || d.createdAt?.toDate?.()?.toISOString?.().split("T")[0] || new Date().toISOString().split("T")[0];
-                if (date !== selectedDate) return;
                 const key = `${sessionId}_${date}`;
 
-                if (!reportsMap[key]) {
-                  reportsMap[key] = {
-                    id: key,
-                    sessionId,
-                    sessionName,
-                    block: sessionBlock,
-                    date,
-                    students: [],
-                    present: 0,
-                    absent: 0,
-                    excused: 0,
-                    total: 0,
+                // Only process attendance for selected date
+                if (date === selectedDate) {
+                  if (!reportsMap[key]) {
+                    reportsMap[key] = {
+                      id: key,
+                      sessionId,
+                      sessionName,
+                      block: sessionBlock,
+                      date,
+                      students: [],
+                      present: 0,
+                      absent: 0,
+                      excused: 0,
+                      total: 0,
+                    };
+                  }
+
+                  if (reportsMap[key].students.length === 0 && allStudents.length > 0) {
+                    reportsMap[key].students = allStudents.map((s) => ({
+                      studentUid: s.studentUid,
+                      studentName: s.studentName,
+                      status: "absent",
+                    }));
+                  }
+
+                  const existingIndex = reportsMap[key].students.findIndex((s) => s.studentUid === d.studentUid);
+                  const studentEntry = {
+                    studentUid: d.studentUid,
+                    studentName: d.studentName || "Unknown",
+                    status: normalizedStatus,
+                    markedBy: d.markedBy || null,
+                    createdAt: d.createdAt || null,
                   };
-                }
 
-                if (reportsMap[key].students.length === 0 && allStudents.length > 0) {
-                  reportsMap[key].students = allStudents.map((s) => ({
-                    studentUid: s.studentUid,
-                    studentName: s.studentName,
-                    status: "absent",
-                  }));
-                }
-
-                const existingIndex = reportsMap[key].students.findIndex((s) => s.studentUid === d.studentUid);
-                const studentEntry = {
-                  studentUid: d.studentUid,
-                  studentName: d.studentName || "Unknown",
-                  status: normalizedStatus,
-                  markedBy: d.markedBy || null,
-                  createdAt: d.createdAt || null,
-                };
-
-                if (existingIndex >= 0) {
-                  reportsMap[key].students[existingIndex] = studentEntry;
-                } else {
-                  reportsMap[key].students.push(studentEntry);
+                  if (existingIndex >= 0) {
+                    reportsMap[key].students[existingIndex] = studentEntry;
+                  } else {
+                    reportsMap[key].students.push(studentEntry);
+                  }
                 }
               });
 
@@ -334,7 +344,7 @@ export default function Report() {
 /* styles */
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F7FAFF", padding: 16 },
-  header: { fontSize: 20, fontWeight: "700", color: "#1E3A8A", marginBottom: 12 },
+  header: { fontSize: 20, fontWeight: "700", color: "#1E3A8A", marginBottom: 15 },
   card: {
     backgroundColor: "#fff",
     padding: 14,

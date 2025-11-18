@@ -78,6 +78,13 @@ export default function More({ navigation }) {
     ]);
   };
 
+  const handleAboutUs = () => {
+    Alert.alert(
+      "About Us",
+      "Leader: Pogoy, Cristine N. \n\n Members: \n    Boncales, Mylene\n    Crompido, Genie Mae\n    Mabalatan, Jubelle Franz\n    Palmero, Imee\n    Romanda, Carl\n    Sanico, Deasyrie\n    Taghoy, Cherry Ruth\n    Tampos, Judelien\n    Vallentos, Myla"
+    );
+  };
+
   if (loading) {
     return (
       <View
@@ -118,12 +125,15 @@ export default function More({ navigation }) {
         <Text style={styles.infoLabel}>Email:</Text>
         <Text style={styles.infoValue}>{email}</Text>
 
-        {/* Username REMOVED */}
-
         {/* Department */}
         <Text style={styles.infoLabel}>Department:</Text>
         <Text style={styles.infoValue}>{department}</Text>
       </View>
+
+      {/* ABOUT US BUTTON */}
+      <TouchableOpacity style={styles.aboutButton} onPress={handleAboutUs}>
+        <Text style={styles.aboutText}>About Us</Text>
+      </TouchableOpacity>
 
       {/* LOGOUT BUTTON */}
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
@@ -200,8 +210,23 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
+  aboutButton: {
+    backgroundColor: "#1E40AF",
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    elevation: 2,
+    marginTop: 10,
+  },
+
+  aboutText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+
   logoutButton: {
-    marginTop: 25,
+    marginTop: 15,
     backgroundColor: "#2563EB",
     paddingVertical: 14,
     borderRadius: 12,

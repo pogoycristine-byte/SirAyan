@@ -2,7 +2,7 @@
   "expo": {
     "name": "Attendify",
     "slug": "Attendify",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/ba.png",
     "userInterfaceStyle": "light",
@@ -16,8 +16,9 @@
       "supportsTablet": true
     },
     "android": {
+      "versionCode": 2,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/ba.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
@@ -34,9 +35,10 @@
       "expo-mail-composer",
       "expo-font"
     ],
+    "owner": "pogoycristine-byte",
     "extra": {
       "eas": {
-        "projectId": "0bba6575-314e-4db2-9fbc-a5c3b70eb56f"
+        "projectId": "92732bbb-b861-40d7-bcf6-581bbe009233"
       }
     }
   }
