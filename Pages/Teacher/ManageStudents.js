@@ -261,6 +261,7 @@ export default function ManageStudents({ route, navigation }) {
               <TextInput
                 style={styles.manageSearchInput}
                 placeholder="Search by name or ID"
+                placeholderTextColor="#0c0a0aff"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
               />
@@ -381,7 +382,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     marginTop: 15,
   },
-  manageSearchInput: { flex: 1, marginLeft: 8, fontSize: 15, color: "#333" },
+  manageSearchInput: { flex: 1, marginLeft: 8, fontSize: 15, color: "#0b0909ff" },
   manageHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 15, marginTop: 10 },
   manageListTitle: { fontSize: 18, fontWeight: "700", color: "#1E3A8A" },
   manageAddButton: { backgroundColor: "#2563EB", paddingVertical: 10, paddingHorizontal: 15, borderRadius: 10, justifyContent: "center", alignItems: "center" },

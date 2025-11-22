@@ -37,11 +37,15 @@ export default function Report() {
       return null;
     }
   };
+
+  // ⭐ FIXED: Change date by 1 day at a time
   const changeSelectedDate = (deltaDays) => {
-    const d = new Date(selectedDate + "T00:00:00");
+    const d = new Date(selectedDate + "T12:00:00"); // Use noon to avoid timezone issues
     d.setDate(d.getDate() + deltaDays);
-    setSelectedDate(d.toISOString().split("T")[0]);
+    const newDateStr = d.toISOString().split("T")[0];
+    setSelectedDate(newDateStr);
   };
+
   const setToday = () => setSelectedDate(new Date().toISOString().split("T")[0]);
 
   // Load teacher info
@@ -90,6 +94,9 @@ export default function Report() {
           const sessionBlock = sData.block || sData.section || "";
           const sessionDaysArr = Array.isArray(sData.days) ? sData.days : (sData.days ? [sData.days] : []);
           const sessionDaysShort = sessionDaysArr.map((d) => (typeof d === "string" ? d : ""));
+
+          // ⭐ NEW: Check if selected date matches any of the session days
+          const isValidDay = sessionDaysShort.includes(selectedDayName);
 
           const attCol = collection(db, "sessions", sessionId, "attendance");
           const studentsCol = collection(db, "sessions", sessionId, "students");
@@ -171,7 +178,8 @@ export default function Report() {
                 }
               });
 
-              if (sessionDaysShort.includes(getDayName(selectedDate))) {
+              // ⭐ MODIFIED: Only create default entry if selected day is valid for this session
+              if (isValidDay) {
                 const defaultKey = `${sessionId}_${selectedDate}`;
                 if (!reportsMap[defaultKey]) {
                   reportsMap[defaultKey] = {
@@ -357,7 +365,7 @@ const styles = StyleSheet.create({
     borderColor: "#EEF2FF",
   },
   title: { fontSize: 16, fontWeight: "700", color: "#0F172A" },
-  blockText: { fontSize: 13, color: "#044f85ff", marginTop: 4 },   // added for list cards
+  blockText: { fontSize: 13, color: "#044f85ff", marginTop: 4 },
   sub: { fontSize: 13, color: "#6B7280", marginTop: 4 },
   small: { fontSize: 12, color: "#475569", marginTop: 6 },
   empty: { alignItems: "center", marginTop: 40 },
@@ -376,7 +384,7 @@ const styles = StyleSheet.create({
   modalHeader: { marginBottom: 8 },
   modalTitle: { fontSize: 18, fontWeight: "800", color: "#1E293B" },
   modalDate: { fontSize: 13, color: "#6B7280", marginTop: 4 },
-  modalBlock: { fontSize: 13, color: "#6B7280", marginTop: 6 }, // added for modal header
+  modalBlock: { fontSize: 13, color: "#6B7280", marginTop: 6 },
   modalBody: { marginTop: 8, marginBottom: 12 },
   modalSummary: { fontSize: 13, color: "#475569", marginBottom: 8 },
   studentRow: {

@@ -153,15 +153,22 @@ function DashboardMain() {
     endTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
   );
 
-  // manual time input (no time picker toggles)
-
   // Camera scanner states
   const [cameraVisible, setCameraVisible] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  // ⭐ NEW: Track which session is being scanned for
+  const [activeSessionForScanning, setActiveSessionForScanning] = useState(null);
 
   const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+  // Helper function to get day name from date
+  const getDayName = (date) => {
+    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    return dayNames[date.getDay()];
+  };
 
   useEffect(() => {
     const loadTeacherData = async () => {
@@ -212,6 +219,7 @@ function DashboardMain() {
           block: data.block,
           subject: data.subject,
           days: Array.isArray(data.days) ? data.days.join(", ") : data.days || "",
+          daysArray: Array.isArray(data.days) ? data.days : (data.days ? [data.days] : []),
           startTime: data.startTime,
           endTime: data.endTime,
           code: data.code,
@@ -240,6 +248,9 @@ function DashboardMain() {
     try {
       setLoading(true);
 
+      // Generate the class code once
+      const classCode = generateClassCode();
+
       // Save to Firebase
       const docRef = await addDoc(collection(db, "sessions"), {
         subject: sessionSubject,
@@ -248,7 +259,7 @@ function DashboardMain() {
         // store exactly what teacher typed
         startTime: startTimeStr,
         endTime: endTimeStr,
-        code: generateClassCode(),
+        code: classCode,
         teacherId: teacher.id,
         isActive: true,
         createdAt: Timestamp.now(),
@@ -260,9 +271,10 @@ function DashboardMain() {
         block: sessionBlock,
         subject: sessionSubject,
         days: sessionDays.join(", "),
+        daysArray: sessionDays,
         startTime: startTimeStr,
         endTime: endTimeStr,
-        code: generateClassCode(),
+        code: classCode,
       };
 
       setClasses((prev) => [...prev, newClass]);
@@ -303,17 +315,58 @@ function DashboardMain() {
       if (payload && payload.studentId && payload.classId) {
         const studentId = String(payload.studentId);
         const sessionId = String(payload.classId);
-        const studentName = payload.studentName || payload.studentName || "Student";
+        const studentName = payload.studentName || "Student";
+
+        // ⭐ NEW: Check if the QR code belongs to the current session being scanned
+        if (activeSessionForScanning && sessionId !== activeSessionForScanning.id) {
+          Alert.alert(
+            "Wrong Session", 
+            `This QR code belongs to a different session. You are scanning for "${activeSessionForScanning.name}" but this QR code is for session ID: ${sessionId}`
+          );
+          setCameraVisible(false);
+          setActiveSessionForScanning(null);
+          return;
+        }
+
+        // Fetch session data to check if today is a valid day
+        const sessionRef = doc(db, "sessions", sessionId);
+        const sessionSnap = await getDoc(sessionRef);
+        
+        if (!sessionSnap.exists()) {
+          Alert.alert("Error", "Session not found.");
+          setCameraVisible(false);
+          setActiveSessionForScanning(null);
+          return;
+        }
+
+        const sessionData = sessionSnap.data();
+        const sessionDaysArr = Array.isArray(sessionData.days) ? sessionData.days : (sessionData.days ? [sessionData.days] : []);
+        
+        // Get current day name (Mon, Tue, Wed, etc.)
+        const currentDate = new Date();
+        const currentDayName = getDayName(currentDate);
+        
+        // Check if current day is in the session's days
+        if (!sessionDaysArr.includes(currentDayName)) {
+          Alert.alert(
+            "Invalid Day", 
+            `This session is only scheduled for: ${sessionDaysArr.join(", ")}. Today is ${currentDayName}.`
+          );
+          setCameraVisible(false);
+          setActiveSessionForScanning(null);
+          return;
+        }
 
         // Use ISO format YYYY-MM-DD to match Report.js
-        const date = new Date().toISOString().split("T")[0]; // "2025-11-17"
+        const date = currentDate.toISOString().split("T")[0]; // "2025-11-17"
          
-         const attendanceId = `${studentId}_${date.replace(/\s+/g, "_")}`;
+         // Include sessionId in the attendance ID to make it unique per session
+         const attendanceId = `${studentId}_${sessionId}_${date.replace(/\s+/g, "_")}`;
 
          const attRef = doc(db, "sessions", sessionId, "attendance", attendanceId);
          const attSnap = await getDoc(attRef);
          if (attSnap.exists()) {
-           Alert.alert("Info", `${studentName} already marked for ${date}.`);
+           Alert.alert("Info", `${studentName} already marked for this session on ${date}.`);
          } else {
            await setDoc(attRef, {
              studentUid: studentId,
@@ -328,6 +381,7 @@ function DashboardMain() {
          }
 
          setCameraVisible(false);
+         setActiveSessionForScanning(null);
          return;
       }
 
@@ -336,13 +390,16 @@ function DashboardMain() {
       if (qrCode) {
         Alert.alert("Success", `QR Code scanned for class: ${qrCode.classId || qrCode.code}`);
         setCameraVisible(false);
+        setActiveSessionForScanning(null);
         return;
       }
 
       Alert.alert("Invalid QR Code", "This QR code is not recognized.");
+      setActiveSessionForScanning(null);
     } catch (error) {
       Alert.alert("Error", "Failed to process QR code: " + (error.message || error));
       console.error("QR Scan error:", error);
+      setActiveSessionForScanning(null);
     } finally {
       setLoading(false);
     }
@@ -417,6 +474,8 @@ function DashboardMain() {
           { backgroundColor: "#2563EB", marginTop: 8 },
         ]}
         onPress={() => {
+          // ⭐ NEW: Set which session we're scanning for
+          setActiveSessionForScanning(item);
           setCameraVisible(true);
           setScanned(false);
         }}
@@ -434,12 +493,7 @@ function DashboardMain() {
         <View style={{ paddingHorizontal: 20, paddingTop: insets.top - 15, paddingBottom: 15 }}>
           <View style={styles.headerUnique}>
             <View style={styles.headerLeftUnique}>
-              <Image
-                source={{
-                  uri: "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
-                }}
-                style={styles.profileImageUnique}
-              />
+      
               <View>
                 <Text style={styles.headerTextUnique}>Welcome back,</Text>
                 <Text style={styles.teacherNameUnique}>{teacher.name}</Text>
@@ -495,10 +549,10 @@ function DashboardMain() {
         >
           <KeyboardAvoidingView
             behavior={Platform.OS === "ios" ? "padding" : "height"}
-            keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 80}
             style={{ flex: 1 }}
           >
-            <View
+            <TouchableOpacity
+              activeOpacity={1}
               style={{
                 flex: 1,
                 backgroundColor: "rgba(0,0,0,0.5)",
@@ -506,17 +560,14 @@ function DashboardMain() {
                 alignItems: "center",
                 paddingHorizontal: 20,
               }}
+              onPress={() => setModalVisible(false)}
             >
-              <ScrollView
-                contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
-                keyboardShouldPersistTaps="handled"
-                style={{ width: "100%" }}
-              >
+              <TouchableOpacity activeOpacity={1} style={{ width: "100%" }}>
                 <View style={styles.modalContentUnique}>
                   <ScrollView
                     keyboardShouldPersistTaps="handled"
-                    nestedScrollEnabled={true}
-                    style={{ maxHeight: "100%" }}
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{ paddingBottom: 0 }}
                   >
                     <Text style={styles.modalTitleUnique}>Create New Session</Text>
 
@@ -607,8 +658,8 @@ function DashboardMain() {
                     </TouchableOpacity>
                   </ScrollView>
                 </View>
-              </ScrollView>
-            </View>
+              </TouchableOpacity>
+            </TouchableOpacity>
           </KeyboardAvoidingView>
         </Modal>
       </ScrollView>
@@ -621,6 +672,15 @@ function DashboardMain() {
             barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
           />
           <View style={styles.overlay}>
+            {/* ⭐ NEW: Show which session is being scanned */}
+            {activeSessionForScanning && (
+              <View style={styles.sessionBanner}>
+                <Text style={styles.sessionBannerText}>
+                  Scanning for: {activeSessionForScanning.name}
+                </Text>
+              </View>
+            )}
+            
             <View style={styles.scanFrame} />
             <Text style={styles.scanText}>Align QR Code</Text>
 
@@ -638,7 +698,10 @@ function DashboardMain() {
                 styles.rescanButton,
                 { bottom: 80, backgroundColor: "#F87171" },
               ]}
-              onPress={() => setCameraVisible(false)}
+              onPress={() => {
+                setCameraVisible(false);
+                setActiveSessionForScanning(null);
+              }}
             >
               <Text style={styles.rescanButtonText}>Close</Text>
             </TouchableOpacity>
@@ -673,7 +736,7 @@ export default function TeacherDashboard() {
           backgroundColor: "#fff",
           borderTopLeftRadius: 20,
           borderTopRightRadius: 20,
-            paddingTop: 0,
+          paddingTop: 0,
           height: 65 + insets.bottom,
           paddingBottom: 10 + insets.bottom,
         },
@@ -727,6 +790,7 @@ const styles = StyleSheet.create({
   safeAreaUnique: { flex: 1, backgroundColor: "#F0F4FF" },
   headerUnique: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   headerLeftUnique: { flexDirection: "row", alignItems: "center" },
+  profileImageUnique: { width: 50, height: 50, borderRadius: 25, marginRight: 12 },
   headerTextUnique: { fontSize: 12, lineHeight: 14 },
   teacherNameUnique: { fontSize: 16, fontWeight: "bold", lineHeight: 18 },
   departmentTextUnique: { fontSize: 11, lineHeight: 12 },
@@ -741,7 +805,6 @@ const styles = StyleSheet.create({
   classDetailsUnique: { fontSize: 14, color: "#555", marginVertical: 2 },
   classCodeUnique: { fontSize: 13, color: "#2563EB", marginBottom: 8 },
   manageBtnUnique: { backgroundColor: "#10B981", paddingVertical: 8, borderRadius: 8, alignItems: "center" },
-  // smaller inputs inside modal
   inputUnique: {
     borderWidth: 1,
     borderColor: "#CBD5E1",
@@ -753,7 +816,6 @@ const styles = StyleSheet.create({
     height: 40,
     fontSize: 14,
   },
-  // tighter action button
   createButtonUnique: {
     backgroundColor: "#2563EB",
     paddingVertical: 9,
@@ -765,16 +827,15 @@ const styles = StyleSheet.create({
   },
   createButtonTextUnique: { color: "#fff", fontWeight: "700", fontSize: 14 },
   centeredModalUnique: { justifyContent: "center", alignItems: "center", paddingHorizontal: 0 },
-  // reduced modal size (width and height)
   modalContentUnique: {
-    width: Math.min(360, width * 0.75),
+    width: Math.min(360, width * 0.85),
     backgroundColor: "#fff",
     padding: 14,
     borderRadius: 12,
     alignItems: "stretch",
     maxHeight: "100%",
     alignSelf: "center",
-   },
+  },
   modalTitleUnique: {
     fontSize: 16,
     fontWeight: "700",
@@ -807,5 +868,20 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 50,
     backgroundColor: "#FEE2E2",
+  },
+  sessionBanner: {
+    position: "absolute",
+    top: 60,
+    backgroundColor: "rgba(37, 99, 235, 0.9)",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    zIndex: 10,
+  },
+  sessionBannerText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+    textAlign: "center",
   },
 });

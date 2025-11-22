@@ -14,7 +14,7 @@ import {
     ActivityIndicator,
 } from "react-native";
 
-import AsyncStorage from "@react-native-async-storage/async-storage";  // ⭐ ADDED (for saving emailSent)
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import QRCode from "react-native-qrcode-svg";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -156,12 +156,11 @@ function DashboardMain({ route }) {
 
   const [emailSentByClass, setEmailSentByClass] = useState({}); // { classId: true/false }
 
-  // ⭐ Load email-sent status on app open AND CHECK IF IT'S EXPIRED (1 day old)
-  // — Modified to be per-user (user.uid) so new users don't inherit other users' flags.
+  // Load email-sent status on app open AND CHECK IF IT'S EXPIRED (1 day old)
   useEffect(() => {
       const loadEmailStatus = async () => {
           try {
-              if (!student?.uid) return; // wait until we have the current user's uid
+              if (!student?.uid) return;
 
               const allKeys = await AsyncStorage.getAllKeys();
               const prefix = `excuse_email_sent_${student.uid}_`;
@@ -452,7 +451,7 @@ function DashboardMain({ route }) {
 
 
   // --------------------------------------------------------------
-  // ⭐⭐⭐ UPDATED: Attach File + Email (MailComposer + AsyncStorage)
+  // ⭐⭐⭐ FIXED: Attach File + Email with confirmation dialog
   // --------------------------------------------------------------
   const handleAttachFile = async () => {
       if (!activeClass) {
@@ -510,18 +509,40 @@ function DashboardMain({ route }) {
               return;
           }
 
+          // Open the email composer
           await MailComposer.composeAsync(emailOptions);
 
-          // ⭐ SAVE EMAIL SENT FLAG + TIMESTAMP PER USER + PER CLASS
-          // key format: excuse_email_sent_<userUid>_<classId>
-          const key = `excuse_email_sent_${student.uid}_${activeClass.id}`;
-          await AsyncStorage.setItem(key, Date.now().toString());
+          // ⭐ AFTER returning from email composer, ask user if they sent it
+          Alert.alert(
+              "Email Confirmation",
+              "Did you send the excuse letter email?",
+              [
+                  {
+                      text: "No, I didn't send it",
+                      onPress: () => {
+                          // Do nothing - don't mark as sent
+                      },
+                      style: "cancel",
+                  },
+                  {
+                      text: "Yes, I sent it",
+                      onPress: async () => {
+                          // Save email sent flag with timestamp
+                          const key = `excuse_email_sent_${student.uid}_${activeClass.id}`;
+                          await AsyncStorage.setItem(key, Date.now().toString());
 
-          setEmailSentByClass((prev) => ({
-              ...prev,
-              [activeClass.id]: true,
-          }));
+                          setEmailSentByClass((prev) => ({
+                              ...prev,
+                              [activeClass.id]: true,
+                          }));
+
+                          Alert.alert("Success", "Email status saved!");
+                      },
+                  },
+              ]
+          );
       } catch (error) {
+          console.log("Email error:", error);
           Alert.alert("Error", "Failed to open email app.");
       }
   };
@@ -583,7 +604,7 @@ function DashboardMain({ route }) {
 
 
 
-  // ⭐ NEW: Leave/Delete class
+  // Leave/Delete class
   const handleLeaveClass = async (classId) => {
       Alert.alert(
           "Leave Class?",
@@ -745,7 +766,7 @@ function DashboardMain({ route }) {
                                       </Text>
                                   </TouchableOpacity>
 
-                                  {/* ⭐ NEW: LEAVE CLASS BTN */}
+                                  {/* LEAVE CLASS BTN */}
                                   <TouchableOpacity
                                       style={[
                                           styles.joinClassButton,
